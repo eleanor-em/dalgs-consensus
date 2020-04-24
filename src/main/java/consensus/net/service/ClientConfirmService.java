@@ -17,7 +17,7 @@ public class ClientConfirmService implements Runnable {
     @Override
     public void run() {
         socket.readLine()
-                .flatMap(Validation::tryParseInt)
+                .flatMap(Validation::tryParseUInt)
                 .ifPresent(id -> {
                     // If we already have a connection to this peer, close the socket
                     if (!parent.addPeer(new Peer(parent, id, socket))) {

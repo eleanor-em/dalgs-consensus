@@ -65,7 +65,7 @@ public class Program {
         }
 
         // Check that the argument is a valid integer
-        var maybeId = Validation.tryParseInt(args[0]);
+        var maybeId = Validation.tryParseUInt(args[0]);
         if (maybeId.isEmpty()) {
             System.out.println(USAGE);
             System.out.println("note: <id> must be an integer");

@@ -1,7 +1,7 @@
 package consensus.net;
 
 import consensus.net.data.HostPort;
-import consensus.net.data.Message;
+import consensus.net.data.IncomingMessage;
 import consensus.net.service.ClientConfirmService;
 import consensus.net.service.PeerConnectService;
 import org.apache.logging.log4j.LogManager;
@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.*;
 
 /**
@@ -36,7 +37,8 @@ public class PeerListener {
         // Start worker threads
         exec.execute(() -> listen(hostPort));
         connectService = new PeerConnectService(this, allPeers);
-        sendMonitor();
+        exec.execute(this::sendMonitor);
+        actor.run();
     }
 
     /**
@@ -86,7 +88,7 @@ public class PeerListener {
     /**
      * Handle receiving the given message.
      */
-    public void receive(Message message) {
+    public void receive(IncomingMessage message) {
         actor.receive(message);
     }
 
@@ -109,8 +111,12 @@ public class PeerListener {
         try {
             while (!Thread.interrupted()) {
                 var message = actor.take();
-                for (var client : activePeers.values()) {
-                    client.send(message);
+                if (message.dest.isPresent()) {
+                    var dest = message.dest.get();
+                    Optional.ofNullable(activePeers.get(dest))
+                            .ifPresent(peer -> peer.send(message.msg));
+                } else {
+                    activePeers.values().forEach(peer -> peer.send(message.msg));
                 }
             }
         } catch (InterruptedException e) {

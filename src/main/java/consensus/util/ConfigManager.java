@@ -7,9 +7,7 @@ import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * A class to wrap Apache's Commons Config in a safer manner (to avoid NullPointerExceptions).
@@ -52,6 +50,6 @@ public class ConfigManager {
      */
     public static Optional<Integer> getInt(String key) {
         return getString(key)
-                .flatMap(Validation::tryParseInt);
+                .flatMap(Validation::tryParseUInt);
     }
 }

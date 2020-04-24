@@ -19,7 +19,7 @@ public class HostPort {
             return Optional.empty();
         }
         var address = tokens[0];
-        var maybePort = Validation.tryParseInt(tokens[1]);
+        var maybePort = Validation.tryParseUInt(tokens[1]);
         return maybePort.map(port -> new HostPort(address, port));
     }
 

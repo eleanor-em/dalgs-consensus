@@ -11,7 +11,7 @@ public class Validation {
     /**
      * Attempts to parse the string as an integer, returning empty if it fails.
      */
-    public static Optional<Integer> tryParseInt(String string) {
+    public static Optional<Integer> tryParseUInt(String string) {
         if (string.matches("\\d+")) {
             return Optional.of(Integer.parseInt(string));
         } else {
