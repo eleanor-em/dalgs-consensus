@@ -49,12 +49,15 @@ public abstract class Actor implements Runnable {
     protected void onReceive(IncomingMessage message) {}
 
     /**
-     * Sends a message to all other peers.
+     * Sends a message to a specific other peer.
      */
     protected final void sendMessage(Message message, int dest) {
         toSend.add(new OutgoingMessage(message, dest));
     }
 
+    /**
+     * Sends a message to all other peers.
+     */
     protected final void sendMessageToAll(Message message) {
         toSend.add(new OutgoingMessage(message));
     }
