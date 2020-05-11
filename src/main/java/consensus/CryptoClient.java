@@ -85,13 +85,8 @@ public class CryptoClient implements IConsensusClient, Runnable {
         for (var i : keygenOpenings.keySet()) {
             var commit = keygenCommitments.get(i);
             var opening = keygenOpenings.get(i);
-            if (!commit.verify(opening.y_i)) {
-                System.out.println("client " + id + ": failed commitment " + i);
-                return Optional.empty();
-            }
-            if (!opening.proof.verify() || !opening.proof.y.equals(opening.y_i) || !opening.proof.g.equals(ctx.g)) {
-                System.out.println("client " + id + ": failed ProofKnowDlog " + i);
-                return Optional.empty();
+            if (!opening.verify(commit)) {
+                System.out.format("Client %d: failed to verify commitment from %d", id, i);
             }
         }
 

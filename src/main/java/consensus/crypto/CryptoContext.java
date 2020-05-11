@@ -5,7 +5,7 @@ import java.security.SecureRandom;
 
 public class CryptoContext {
     private final SecureRandom rng = new SecureRandom();
-    public final GroupElement g;
+    final GroupElement g;
     final BigInteger p;
     final BigInteger q;
 

@@ -5,17 +5,22 @@ import java.util.Arrays;
 public class KeygenCommitMessage extends CryptoMessage {
     public static final CryptoMessageKind KIND = CryptoMessageKind.KEYGEN_COMMIT;
     public final byte[] commitment;
+    public final GroupElement g;
 
     public KeygenCommitMessage(LocalShare share) {
         super(KIND);
         this.commitment = share.commitment;
+        this.g = share.g;
+
         var encoded = CryptoUtils.b64Encode(share.commitment);
         this.append("commitment", encoded);
+        this.append("g", g);
     }
 
-    protected KeygenCommitMessage(String commitment) {
+    protected KeygenCommitMessage(byte[] commitment, GroupElement g) {
         super(KIND);
-        this.commitment = CryptoUtils.b64Decode(commitment);
+        this.commitment = commitment;
+        this.g = g;
     }
 
     public boolean verify(GroupElement opening) {

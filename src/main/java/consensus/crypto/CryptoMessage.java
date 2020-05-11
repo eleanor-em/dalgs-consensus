@@ -25,6 +25,10 @@ public abstract class CryptoMessage {
         doc.put(key, str);
     }
 
+    protected void append(String key, IByteSerialisable str) {
+        doc.put(key, CryptoUtils.b64Encode(str.asBytes()));
+    }
+
     protected void append(String key, JSONObject obj) {
         doc.put(key, obj);
     }
@@ -39,17 +43,26 @@ public abstract class CryptoMessage {
 
             switch (maybeKind.get()) {
                 case KEYGEN_COMMIT:
+                    // Extract the data
                     var commitment = doc.getString("commitment");
-                    if (commitment != null) {
-                        return Optional.of(new KeygenCommitMessage(commitment));
+                    var g = doc.getString("g");
+
+                    // Validate and convert to the desired format
+                    if (commitment != null && g != null) {
+                        var decodedCommit = CryptoUtils.b64Decode(commitment);
+                        var decodedGenerator = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(g)));
+                        return Optional.of(new KeygenCommitMessage(decodedCommit, decodedGenerator));
                     } else {
                         return Optional.empty();
                     }
 
                 case KEYGEN_OPENING:
+                    // Extract the data
                     var y_i = doc.getString("y_i");
                     var proof = doc.getJSONObject("proof");
                     Optional<ProofKnowDlog> maybeProof = Optional.empty();
+
+                    // Validate and convert to the desired format
                     if (proof != null) {
                         maybeProof = ProofKnowDlog.tryFrom(ctx, proof);
                     }

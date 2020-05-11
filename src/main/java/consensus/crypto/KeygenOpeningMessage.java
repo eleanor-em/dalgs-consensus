@@ -1,5 +1,7 @@
 package consensus.crypto;
 
+import java.util.Optional;
+
 public class KeygenOpeningMessage extends CryptoMessage {
     public static final CryptoMessageKind KIND = CryptoMessageKind.KEYGEN_OPENING;
     public final GroupElement y_i;
@@ -19,5 +21,10 @@ public class KeygenOpeningMessage extends CryptoMessage {
         super(KIND);
         this.y_i = y_i;
         this.proof = proof;
+    }
+
+    public boolean verify(KeygenCommitMessage commit) {
+        return commit.verify(y_i) && proof.verify()
+            && proof.y.equals(y_i) && proof.g.equals(commit.g);
     }
 }
