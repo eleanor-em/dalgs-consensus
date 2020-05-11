@@ -2,6 +2,7 @@ package consensus;
 import consensus.crypto.*;
 import consensus.net.data.IncomingMessage;
 import consensus.net.data.Message;
+import consensus.util.ConfigManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -14,16 +15,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class CryptoClient implements IConsensusClient, Runnable {
     private static final Logger log = LogManager.getLogger(CryptoClient.class);
 
-    // 64-bit: 23817474847197617423
-    // 512-bit: 17576155655779058271814901328806178171487950168424777102087080655104162734827238302572043932624849068810300718730750252373895635484455492913940374855814283
-    // 3072-bit: 3201854198135043281751355951827302660717511577891039451100174903440311942574941872652748640372349512474471423953808906137608197612556723743299109196846441296496088482068282777108403527044577914570548914539399761423404843302059458784166935553050250420159684903245869881204419231081072120037774160529439943413158579371036269117493761439144021603528995268238221293920629088577318006153707974989347456966453436389819000544893522248739862085759243075712049060578785622437016843286797368864289250348491723387972989428297309759691415454847960021754463768773770208123987139826657993458486866489786078782212118563122872570425025853708528722340323683612559816749109375758702868941992463509690971106804076715429672139592578626217662466329615330744227347983762186481264480941285296858085874235763952664402560076176529492177264268491764539440999807667849978260275623298009971415037610988759111052545874375581802776689278470202020490499443
-    private static final BigInteger p = new BigInteger("23817474847197617423");
-
     private final LinkedBlockingQueue<Message> queue = new LinkedBlockingQueue<>();
     private final Map<Integer, KeygenCommitMessage> keygenCommits = new ConcurrentHashMap<>();
     private final Map<Integer, KeygenOpeningMessage> keygenOpenings = new ConcurrentHashMap<>();
     private final Map<Integer, DecryptShareMessage> decryptShares = new ConcurrentHashMap<>();
-    private final CryptoContext ctx = new CryptoContext(p);
+    private final CryptoContext ctx;
 
     private final int id;
     private final int peerCount;
@@ -55,21 +51,21 @@ public class CryptoClient implements IConsensusClient, Runnable {
     public CryptoClient(int id, int peerCount) {
         this.id = id;
         this.peerCount = peerCount;
-    }
-    private void unsafeSleep(int ms) {
-        try {
-            Thread.sleep(ms);
-        } catch (InterruptedException ignored) {}
+
+        var p = ConfigManager.getString("p").orElseGet(() -> {
+            log.warn("using small default prime!");
+            return "23817474847197617423";
+        });
+        this.ctx = new CryptoContext(new BigInteger(p));
     }
 
     @Override
     public void run() {
         // Sleep to ensure network is live
-        unsafeSleep(1000);
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ignored) {}
         log.info("client " + id + " online");
-
-        // Generate parameters
-        var ctx = new CryptoContext(p);
 
         // Generate key share
         var maybeKeyShare = generateKey(ctx);
