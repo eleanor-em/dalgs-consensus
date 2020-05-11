@@ -6,6 +6,7 @@ import consensus.net.data.Message;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -57,10 +58,11 @@ public class CryptoClient implements IConsensusClient, Runnable {
         // Generate parameters, and provide commitment
         var ctx = new CryptoContext(p);
         var keyShare = generateKey(ctx);
-        System.out.format("Client %d: %s\n", id, keyShare);
+        keyShare.ifPresent(ks -> System.out.format("Client %d: %s\n", id, ks));
     }
 
-    private KeyShare generateKey(CryptoContext ctx) {
+    private Optional<KeyShare> generateKey(CryptoContext ctx) {
+        // Publish commitment and wait for others
         var share = new LocalShare(ctx);
         var commitMessage = new KeygenCommitMessage(share);
         keygenCommitments.put(id, commitMessage);
@@ -71,7 +73,7 @@ public class CryptoClient implements IConsensusClient, Runnable {
             Thread.yield();
         }
 
-        // Publish & wait for openings
+        // Publish opening and wait for others
         var openingMessage = new KeygenOpeningMessage(share);
         keygenOpenings.put(id, openingMessage);
         queue.offer(openingMessage.encode());
@@ -85,9 +87,11 @@ public class CryptoClient implements IConsensusClient, Runnable {
             var opening = keygenOpenings.get(i);
             if (!Arrays.equals(CryptoUtils.hash(opening.y_i), commit.commitment)) {
                 System.out.println("client " + id + ": failed commitment " + i);
+                return Optional.empty();
             }
             if (!opening.proof.verify() || !opening.proof.y.equals(opening.y_i) || !opening.proof.g.equals(ctx.g)) {
                 System.out.println("client " + id + ": failed ProofKnowDlog " + i);
+                return Optional.empty();
             }
         }
 
@@ -97,6 +101,6 @@ public class CryptoClient implements IConsensusClient, Runnable {
             pk = pk.mul(opening.y_i);
         }
 
-        return new KeyShare(ctx, pk, share);
+        return Optional.of(new KeyShare(ctx, pk, share));
     }
 }
