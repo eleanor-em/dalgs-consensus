@@ -134,10 +134,10 @@ public class CryptoClient implements IConsensusClient, Runnable {
             Thread.yield();
         }
 
-        // Verify proofs; track index for error reporting
+        // Verify proofs
         for (var i : decryptShares.keySet()) {
             var shareMsg = decryptShares.get(i);
-            if (!shareMsg.verify()) {
+            if (!shareMsg.verify(keygenOpenings.get(i).y_i, ct)) {
                 log.warn(String.format("client %d: failed to verify decrypt proof from %d", id, i));
                 return Optional.empty();
             }

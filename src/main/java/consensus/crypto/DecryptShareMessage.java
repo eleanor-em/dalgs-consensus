@@ -1,5 +1,7 @@
 package consensus.crypto;
 
+import java.math.BigInteger;
+
 public class DecryptShareMessage extends CryptoMessage {
     public static final CryptoMessageKind KIND = CryptoMessageKind.DECRYPT_SHARE;
     public final GroupElement a_i;
@@ -26,7 +28,8 @@ public class DecryptShareMessage extends CryptoMessage {
         this.g = g;
     }
 
-    public boolean verify() {
-        return proof.verify();
+    public boolean verify(GroupElement y_i, Ciphertext ct) {
+        return proof.verify() && proof.a.equals(g) && proof.b.equals(ct.a)
+                && proof.d.equals(y_i) && proof.e.equals(a_i);
     }
 }
