@@ -52,7 +52,9 @@ public class Program {
         for (int i = 0; i < hosts.size(); ++i) {
             final int id = i;
             var thisPeerHosts = new ArrayList<>(hosts);
-            new Thread(() -> new PeerListener(id, thisPeerHosts, new RaftActor(id))).start();
+            var client = new CryptoClient(id, hosts.size());
+            new Thread(() -> new PeerListener(id, thisPeerHosts, new RaftActor(id, client))).start();
+            new Thread(client).start();
         }
     }
 
@@ -73,6 +75,9 @@ public class Program {
         }
         var id = maybeId.get();
 
-        new PeerListener(id, loadHosts(), new RaftActor(id));
+        var hosts = loadHosts();
+        var client = new CryptoClient(id, hosts.size());
+        new Thread(() -> new PeerListener(id, hosts, new RaftActor(id, client)));
+        client.run();
     }
 }
