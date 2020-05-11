@@ -5,7 +5,8 @@ import java.util.Optional;
 
 public enum CryptoMessageKind {
     KEYGEN_COMMIT,
-    KEYGEN_OPENING;
+    KEYGEN_OPENING,
+    DECRYPT_SHARE;
 
     public static Optional<CryptoMessageKind> tryFrom(String name) {
         for (var kind : EnumSet.allOf(CryptoMessageKind.class)) {

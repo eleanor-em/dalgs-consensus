@@ -60,15 +60,34 @@ public abstract class CryptoMessage {
                     // Extract the data
                     var y_i = doc.getString("y_i");
                     var proof = doc.getJSONObject("proof");
-                    Optional<ProofKnowDlog> maybeProof = Optional.empty();
+                    Optional<ProofKnowDlog> maybeProofKnow = Optional.empty();
 
                     // Validate and convert to the desired format
                     if (proof != null) {
-                        maybeProof = ProofKnowDlog.tryFrom(ctx, proof);
+                        maybeProofKnow = ProofKnowDlog.tryFrom(ctx, proof);
                     }
-                    if (y_i != null && maybeProof.isPresent()) {
+                    if (y_i != null && maybeProofKnow.isPresent()) {
                         var y_iActual = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(y_i)));
-                        return Optional.of(new KeygenOpeningMessage(y_iActual, maybeProof.get()));
+                        return Optional.of(new KeygenOpeningMessage(y_iActual, maybeProofKnow.get()));
+                    } else {
+                        return Optional.empty();
+                    }
+
+                case DECRYPT_SHARE:
+                    // Extract the data
+                    var a_i = doc.getString("a_i");
+                    proof = doc.getJSONObject("proof");
+                    g = doc.getString("g");
+                    Optional<ProofEqDlogs> maybeProofEq = Optional.empty();
+
+                    // Validate and convert to the desired format
+                    if (proof != null) {
+                        maybeProofEq = ProofEqDlogs.tryFrom(ctx, proof);
+                    }
+                    if (a_i != null && g != null && maybeProofEq.isPresent()) {
+                        var a_iDecoded = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(a_i)));
+                        var gDecoded = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(g)));
+                        return Optional.of(new DecryptShareMessage(a_iDecoded, maybeProofEq.get(), gDecoded));
                     } else {
                         return Optional.empty();
                     }

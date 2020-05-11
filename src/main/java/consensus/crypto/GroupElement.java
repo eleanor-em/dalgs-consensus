@@ -27,8 +27,24 @@ public class GroupElement implements IByteSerialisable {
         return new GroupElement(p, value.multiply(rhs.value).mod(p));
     }
 
+    public GroupElement div(GroupElement rhs) {
+        // Invert element
+        var inverted = rhs.pow(p.subtract(BigInteger.TWO));
+        return mul(inverted);
+    }
+
     public GroupElement pow(BigInteger n) {
         return new GroupElement(p, value.modPow(n, p));
+    }
+
+    public BigInteger decoded() {
+        // Calculates modular square root
+        var x = value.modPow(p.add(BigInteger.ONE).divide(BigInteger.valueOf(4)), p);
+        if (x.compareTo(q) > 0) {
+            return p.subtract(x);
+        } else {
+            return x;
+        }
     }
 
     @Override

@@ -3,8 +3,8 @@ package consensus.crypto;
 import java.math.BigInteger;
 
 public class Ciphertext {
-    private final GroupElement a;
-    private final GroupElement b;
+    public final GroupElement a;
+    public final GroupElement b;
 
     Ciphertext(GroupElement a, GroupElement b) {
         this.a = a;

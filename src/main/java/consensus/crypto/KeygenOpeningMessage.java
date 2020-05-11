@@ -1,13 +1,11 @@
 package consensus.crypto;
 
-import java.util.Optional;
-
 public class KeygenOpeningMessage extends CryptoMessage {
     public static final CryptoMessageKind KIND = CryptoMessageKind.KEYGEN_OPENING;
     public final GroupElement y_i;
     public final ProofKnowDlog proof;
 
-    public KeygenOpeningMessage(LocalShare share) {
+    public KeygenOpeningMessage(LocalKeygenShare share) {
         super(KIND);
         this.y_i = share.y_i;
         this.proof = share.proof;

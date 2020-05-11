@@ -7,12 +7,12 @@ public class KeygenCommitMessage extends CryptoMessage {
     public final byte[] commitment;
     public final GroupElement g;
 
-    public KeygenCommitMessage(LocalShare share) {
+    public KeygenCommitMessage(LocalKeygenShare share) {
         super(KIND);
         this.commitment = share.commitment;
         this.g = share.g;
 
-        var encoded = CryptoUtils.b64Encode(share.commitment);
+        var encoded = CryptoUtils.b64Encode(this.commitment);
         this.append("commitment", encoded);
         this.append("g", g);
     }
