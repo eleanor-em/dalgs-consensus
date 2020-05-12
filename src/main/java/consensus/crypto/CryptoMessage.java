@@ -6,7 +6,6 @@ import org.apache.logging.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.math.BigInteger;
 import java.util.Optional;
 
 public abstract class CryptoMessage {
@@ -23,10 +22,6 @@ public abstract class CryptoMessage {
 
     protected void append(String key, String str) {
         doc.put(key, str);
-    }
-
-    protected void append(String key, IByteSerialisable str) {
-        doc.put(key, CryptoUtils.b64Encode(str.asBytes()));
     }
 
     protected void append(String key, JSONObject obj) {
@@ -60,10 +55,9 @@ public abstract class CryptoMessage {
                     // Extract the data
                     var y_i = doc.getString("y_i");
                     var proof = doc.getJSONObject("proof");
-                    Optional<ProofKnowDlog> maybeProofKnow = Optional.empty();
 
                     // Validate and convert to the desired format
-                    maybeProofKnow = ProofKnowDlog.tryFrom(ctx, proof);
+                    var maybeProofKnow = ProofKnowDlog.tryFrom(ctx, proof);
 
                     if (y_i != null && maybeProofKnow.isPresent()) {
                         var y_iActual = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(y_i));
@@ -86,10 +80,9 @@ public abstract class CryptoMessage {
                     var a_i = doc.getString("a_i");
                     proof = doc.getJSONObject("proof");
                     g = doc.getString("g");
-                    Optional<ProofEqDlogs> maybeProofEq = Optional.empty();
 
                     // Validate and convert to the desired format
-                    maybeProofEq = ProofEqDlogs.tryFrom(ctx, proof);
+                    var maybeProofEq = ProofEqDlogs.tryFrom(ctx, proof);
 
                     if (a_i != null && g != null && maybeProofEq.isPresent()) {
                         var a_iDecoded = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(a_i));

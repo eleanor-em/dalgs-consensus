@@ -5,8 +5,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
-public class CryptoUtils {
-
+class CryptoUtils {
     private CryptoUtils() {}
 
     public static MessageDigest getHasher() {
@@ -23,7 +22,7 @@ public class CryptoUtils {
         return hasher.digest();
     }
 
-    public static byte[] hash(IByteSerialisable input) {
+    public static byte[] hash(GroupElement input) {
         var hasher = getHasher();
         hasher.update(input.asBytes());
         return hasher.digest();

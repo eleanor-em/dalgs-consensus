@@ -2,14 +2,11 @@ package consensus.crypto;
 
 import java.math.BigInteger;
 
-public class GroupElement implements IByteSerialisable {
+public class GroupElement {
     final BigInteger p;
     private final BigInteger q;
     final BigInteger value;
 
-    GroupElement(CryptoContext ctx, BigInteger value) {
-        this(ctx.p, value);
-    }
     GroupElement(BigInteger p, long value) {
         this(p, BigInteger.valueOf(value));
     }
@@ -67,7 +64,6 @@ public class GroupElement implements IByteSerialisable {
         return CryptoUtils.b64Encode(value);
     }
 
-    @Override
     public byte[] asBytes() {
         return value.toByteArray();
     }

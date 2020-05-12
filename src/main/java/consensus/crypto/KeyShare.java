@@ -1,8 +1,6 @@
 package consensus.crypto;
 
 import java.math.BigInteger;
-import java.util.Optional;
-
 
 public class KeyShare {
     private final CryptoContext ctx;

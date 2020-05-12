@@ -6,7 +6,6 @@ import consensus.util.ConfigManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
@@ -79,7 +78,7 @@ public class CryptoClient implements IConsensusClient, Runnable {
         if (maybeKeyShare.isEmpty()) {
             return;
         }
-        
+
         var keyShare = maybeKeyShare.get();
         log.info("client " + id + ": " + keyShare);
 
@@ -177,8 +176,7 @@ public class CryptoClient implements IConsensusClient, Runnable {
 
     private Optional<BigInteger> decrypt(Ciphertext ct, KeyShare keyShare) {
         // Publish share and wait for others
-        var share = new LocalDecryptShare(ctx, keyShare, ct);
-        var shareMessage = new DecryptShareMessage(share);
+        var shareMessage = new DecryptShareMessage(ctx, keyShare, ct);
         decryptShares.put(id, shareMessage);
         queue.offer(shareMessage.encode());
 
@@ -189,8 +187,8 @@ public class CryptoClient implements IConsensusClient, Runnable {
 
         // Verify proofs
         for (var i : decryptShares.keySet()) {
-            var shareMsg = decryptShares.get(i);
-            if (!shareMsg.verify(keygenOpenings.get(i).y_i, ct)) {
+            shareMessage = decryptShares.get(i);
+            if (!shareMessage.verify(keygenOpenings.get(i).y_i, ct)) {
                 log.warn(String.format("client %d: failed to verify decrypt proof from %d", id, i));
                 return Optional.empty();
             }

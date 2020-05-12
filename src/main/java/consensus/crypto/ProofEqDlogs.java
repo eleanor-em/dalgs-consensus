@@ -5,7 +5,7 @@ import org.json.JSONObject;
 import java.math.BigInteger;
 import java.util.Optional;
 
-public class ProofEqDlogs {
+class ProofEqDlogs {
     public final GroupElement a;
     public final GroupElement b;
     public final GroupElement d;

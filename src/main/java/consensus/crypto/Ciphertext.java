@@ -2,7 +2,6 @@ package consensus.crypto;
 
 import org.json.JSONObject;
 
-import java.math.BigInteger;
 import java.util.Optional;
 
 public class Ciphertext {
