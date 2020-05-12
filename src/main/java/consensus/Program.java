@@ -22,11 +22,16 @@ public class Program {
     private static final String USAGE = "usage: java -jar consensus.jar <id>";
 
     public static void main(String[] args) {
-        runDebug();
+        ConfigManager.loadProperties("consensus.properties");
+        var mode = ConfigManager.getString("mode").orElse("");
+        if (mode.equalsIgnoreCase("debug")) {
+            runDebug();
+        } else {
+            runActual(args);
+        }
     }
 
     private static List<HostPort> loadHosts() {
-        ConfigManager.loadProperties("consensus.properties");
 
         // Load the targets to connect to and validate them
         var hostList = ConfigManager.getString("hosts").orElse("").split(",");
