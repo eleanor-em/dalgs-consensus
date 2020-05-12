@@ -27,7 +27,7 @@ public class Program {
         if (mode.equalsIgnoreCase("debug")) {
             runDebug();
         } else {
-            runActual(args);
+            runRelease(args);
         }
     }
 
@@ -62,7 +62,7 @@ public class Program {
         }
     }
 
-    private static void runActual(String[] args) {
+    private static void runRelease(String[] args) {
         // Check command line arguments: the first argument is this peer's ID
         if (args.length < 1) {
             System.out.println(USAGE);
@@ -83,5 +83,6 @@ public class Program {
         var client = new CryptoClient(id, hosts.size());
         new Thread(() -> new PeerListener(id, hosts, new RaftActor(id, client))).start();
         client.run();
+        System.exit(0);
     }
 }
