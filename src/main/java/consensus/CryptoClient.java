@@ -73,7 +73,7 @@ public class CryptoClient implements IConsensusClient, Runnable {
 
     private void unsafeSleep() {
         try {
-            Thread.sleep(rng.nextInt(2000) + 1000);
+            Thread.sleep(rng.nextInt(10000) + 1000);
         } catch (InterruptedException ignored) {}
     }
 
