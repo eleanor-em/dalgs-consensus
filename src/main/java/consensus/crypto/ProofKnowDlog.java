@@ -51,16 +51,20 @@ public class ProofKnowDlog {
     }
 
     public static Optional<ProofKnowDlog> tryFrom(CryptoContext ctx, JSONObject obj) {
+        if (obj == null) {
+            return Optional.empty();
+        }
+
         var gStr = obj.getString("g");
         var yStr = obj.getString("y");
         var aStr = obj.getString("a");
         var rStr = obj.getString("r");
 
         if (gStr != null && yStr != null && aStr != null && rStr != null) {
-            var g = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(gStr)));
-            var y = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(yStr)));
-            var a = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(aStr)));
-            var r = new BigInteger(CryptoUtils.b64Decode(rStr));
+            var g = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(gStr));
+            var y = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(yStr));
+            var a = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(aStr));
+            var r = CryptoUtils.b64toBigInt(rStr);
             return Optional.of(new ProofKnowDlog(g, y, a, r));
         } else {
             return Optional.empty();

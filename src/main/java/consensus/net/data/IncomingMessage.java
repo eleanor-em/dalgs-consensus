@@ -16,6 +16,10 @@ public class IncomingMessage {
     }
 
     public static Optional<IncomingMessage> tryFrom(String str) {
+        if (str == null) {
+            return Optional.empty();
+        }
+
         var split = str.split(DELIM);
         if (split.length < 2) {
             return Optional.empty();

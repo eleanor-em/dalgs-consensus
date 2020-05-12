@@ -3,7 +3,7 @@ package consensus.crypto;
 import java.math.BigInteger;
 
 public class GroupElement implements IByteSerialisable {
-    private final BigInteger p;
+    final BigInteger p;
     private final BigInteger q;
     final BigInteger value;
 
@@ -64,7 +64,7 @@ public class GroupElement implements IByteSerialisable {
 
     @Override
     public String toString() {
-        return value.toString(36);
+        return CryptoUtils.b64Encode(value);
     }
 
     @Override

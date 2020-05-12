@@ -66,6 +66,10 @@ public class ProofEqDlogs {
     }
 
     public static Optional<ProofEqDlogs> tryFrom(CryptoContext ctx, JSONObject obj) {
+        if (obj == null) {
+            return Optional.empty();
+        }
+
         var aStr = obj.getString("a");
         var bStr = obj.getString("b");
         var dStr = obj.getString("d");
@@ -75,13 +79,13 @@ public class ProofEqDlogs {
         var rStr = obj.getString("r");
 
         if (aStr != null && bStr != null && dStr != null && eStr != null && gStr != null && hStr != null) {
-            var a = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(aStr)));
-            var b = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(bStr)));
-            var d = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(dStr)));
-            var e = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(eStr)));
-            var g = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(gStr)));
-            var h = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(hStr)));
-            var r = new BigInteger(CryptoUtils.b64Decode(rStr));
+            var a = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(aStr));
+            var b = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(bStr));
+            var d = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(dStr));
+            var e = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(eStr));
+            var g = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(gStr));
+            var h = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(hStr));
+            var r = CryptoUtils.b64toBigInt(rStr);
             return Optional.of(new ProofEqDlogs(a, b, d, e, g, h, r));
         } else {
             return Optional.empty();

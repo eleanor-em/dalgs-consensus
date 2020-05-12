@@ -1,5 +1,6 @@
 package consensus.crypto;
 
+import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
@@ -16,10 +17,20 @@ public class CryptoUtils {
         }
     }
 
+    public static byte[] hash(BigInteger input) {
+        var hasher = getHasher();
+        hasher.update(input.toByteArray());
+        return hasher.digest();
+    }
+
     public static byte[] hash(IByteSerialisable input) {
         var hasher = getHasher();
         hasher.update(input.asBytes());
         return hasher.digest();
+    }
+
+    public static String b64Encode(BigInteger x) {
+        return b64Encode(x.toByteArray());
     }
 
     public static String b64Encode(byte[] bytes) {
@@ -28,5 +39,9 @@ public class CryptoUtils {
 
     public static byte[] b64Decode(String b64) {
         return Base64.getDecoder().decode(b64);
+    }
+
+    public static BigInteger b64toBigInt(String b64) {
+        return new BigInteger(b64Decode(b64));
     }
 }

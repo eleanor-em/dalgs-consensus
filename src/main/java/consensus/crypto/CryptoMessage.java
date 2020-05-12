@@ -50,7 +50,7 @@ public abstract class CryptoMessage {
                     // Validate and convert to the desired format
                     if (commitment != null && g != null) {
                         var decodedCommit = CryptoUtils.b64Decode(commitment);
-                        var decodedGenerator = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(g)));
+                        var decodedGenerator = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(g));
                         return Optional.of(new KeygenCommitMessage(decodedCommit, decodedGenerator));
                     } else {
                         return Optional.empty();
@@ -63,12 +63,20 @@ public abstract class CryptoMessage {
                     Optional<ProofKnowDlog> maybeProofKnow = Optional.empty();
 
                     // Validate and convert to the desired format
-                    if (proof != null) {
-                        maybeProofKnow = ProofKnowDlog.tryFrom(ctx, proof);
-                    }
+                    maybeProofKnow = ProofKnowDlog.tryFrom(ctx, proof);
+
                     if (y_i != null && maybeProofKnow.isPresent()) {
-                        var y_iActual = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(y_i)));
+                        var y_iActual = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(y_i));
                         return Optional.of(new KeygenOpeningMessage(y_iActual, maybeProofKnow.get()));
+                    } else {
+                        return Optional.empty();
+                    }
+
+                case POST_VOTE:
+                    var maybeVote = Ciphertext.tryFrom(ctx, doc.getJSONObject("vote"));
+                    var maybeProof = ProofKnowDlog.tryFrom(ctx, doc.getJSONObject("proof"));
+                    if (maybeVote.isPresent() && maybeProof.isPresent()) {
+                        return Optional.of(new PostVoteMessage(maybeVote.get(), maybeProof.get()));
                     } else {
                         return Optional.empty();
                     }
@@ -81,12 +89,11 @@ public abstract class CryptoMessage {
                     Optional<ProofEqDlogs> maybeProofEq = Optional.empty();
 
                     // Validate and convert to the desired format
-                    if (proof != null) {
-                        maybeProofEq = ProofEqDlogs.tryFrom(ctx, proof);
-                    }
+                    maybeProofEq = ProofEqDlogs.tryFrom(ctx, proof);
+
                     if (a_i != null && g != null && maybeProofEq.isPresent()) {
-                        var a_iDecoded = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(a_i)));
-                        var gDecoded = new GroupElement(ctx.p, new BigInteger(CryptoUtils.b64Decode(g)));
+                        var a_iDecoded = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(a_i));
+                        var gDecoded = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(g));
                         return Optional.of(new DecryptShareMessage(a_iDecoded, maybeProofEq.get(), gDecoded));
                     } else {
                         return Optional.empty();
@@ -97,6 +104,7 @@ public abstract class CryptoMessage {
                     return Optional.empty();
             }
         } catch (JSONException e) {
+            e.printStackTrace();
             log.warn("failed parsing JSON: " + e.getMessage());
             return Optional.empty();
         }

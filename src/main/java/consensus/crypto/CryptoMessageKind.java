@@ -6,6 +6,7 @@ import java.util.Optional;
 public enum CryptoMessageKind {
     KEYGEN_COMMIT,
     KEYGEN_OPENING,
+    POST_VOTE,
     DECRYPT_SHARE;
 
     public static Optional<CryptoMessageKind> tryFrom(String name) {

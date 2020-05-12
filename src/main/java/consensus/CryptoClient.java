@@ -6,7 +6,10 @@ import consensus.util.ConfigManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.lang.reflect.Array;
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,6 +21,7 @@ public class CryptoClient implements IConsensusClient, Runnable {
     private final LinkedBlockingQueue<Message> queue = new LinkedBlockingQueue<>();
     private final Map<Integer, KeygenCommitMessage> keygenCommits = new ConcurrentHashMap<>();
     private final Map<Integer, KeygenOpeningMessage> keygenOpenings = new ConcurrentHashMap<>();
+    private final Map<Integer, PostVoteMessage> postVotes = new ConcurrentHashMap<>();
     private final Map<Integer, DecryptShareMessage> decryptShares = new ConcurrentHashMap<>();
     private final CryptoContext ctx;
 
@@ -40,6 +44,9 @@ public class CryptoClient implements IConsensusClient, Runnable {
                     break;
                 case KEYGEN_OPENING:
                     keygenOpenings.put(message.src, (KeygenOpeningMessage) msg);
+                    break;
+                case POST_VOTE:
+                    postVotes.put(message.src, (PostVoteMessage) msg);
                     break;
                 case DECRYPT_SHARE:
                     decryptShares.put(message.src, (DecryptShareMessage) msg);
@@ -65,22 +72,51 @@ public class CryptoClient implements IConsensusClient, Runnable {
         try {
             Thread.sleep(1000);
         } catch (InterruptedException ignored) {}
-        log.info("client " + id + " online");
+        log.info("client " + id + ": online");
 
         // Generate key share
         var maybeKeyShare = generateKey(ctx);
         if (maybeKeyShare.isEmpty()) {
-            log.warn("client " + id + " failed key generation");
             return;
         }
+        
         var keyShare = maybeKeyShare.get();
         log.info("client " + id + ": " + keyShare);
 
-        // Test: distributed decryption
-        var m = BigInteger.valueOf(1337);
-        var r = BigInteger.valueOf(62553055);
-        var ct = keyShare.encrypt(m, r);
-        decrypt(ct, keyShare).ifPresent(result -> log.info("client " + id + ": decryption: " + result));
+        // Send vote
+        if (!sendVote(keyShare, id + 10)) {
+            return;
+        }
+
+        // Decrypt votes
+        var maybeVotes = decryptVotes(keyShare);
+        if (maybeVotes.isEmpty()) {
+            return;
+        }
+
+        log.info("client " + id + ": result: " + maybeVotes.get());
+    }
+
+    private boolean sendVote(KeyShare keyShare, int vote) {
+        // Send vote
+        var msg = new PostVoteMessage(ctx, keyShare, vote);
+        postVotes.put(id, msg);
+        queue.offer(msg.encode());
+
+        // Wait for other votes
+        while (postVotes.size() < peerCount) {
+            Thread.yield();
+        }
+
+        // Check proofs
+        for (var postVote : postVotes.values()) {
+            if (!postVote.verify(ctx)) {
+                log.warn("client " + id + " failed to verify others' votes");
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private Optional<KeyShare> generateKey(CryptoContext ctx) {
@@ -120,6 +156,23 @@ public class CryptoClient implements IConsensusClient, Runnable {
         }
 
         return Optional.of(new KeyShare(ctx, pk, share));
+    }
+
+    private Optional<List<BigInteger>> decryptVotes(KeyShare keyShare) {
+        List<BigInteger> votes = new ArrayList<>();
+
+        for (var i : postVotes.keySet()) {
+            decryptShares.clear();
+            var decrypted = decrypt(postVotes.get(i).vote, keyShare);
+            if (decrypted.isEmpty()) {
+                log.warn("client " + id + " failed to decrypt vote from " + i);
+                return Optional.empty();
+            } else {
+                votes.add(decrypted.get());
+            }
+        }
+
+        return Optional.of(votes);
     }
 
     private Optional<BigInteger> decrypt(Ciphertext ct, KeyShare keyShare) {
