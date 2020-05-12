@@ -32,7 +32,6 @@ public class Program {
     }
 
     private static List<HostPort> loadHosts() {
-
         // Load the targets to connect to and validate them
         var hostList = ConfigManager.getString("hosts").orElse("").split(",");
         var peerHostPorts = Arrays.stream(hostList)
@@ -82,7 +81,7 @@ public class Program {
 
         var hosts = loadHosts();
         var client = new CryptoClient(id, hosts.size());
-        new Thread(() -> new PeerListener(id, hosts, new RaftActor(id, client)));
+        new Thread(() -> new PeerListener(id, hosts, new RaftActor(id, client))).start();
         client.run();
     }
 }
