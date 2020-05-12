@@ -22,6 +22,13 @@ class CryptoUtils {
         return hasher.digest();
     }
 
+    public static byte[] hash(Ciphertext input) {
+        var hasher = getHasher();
+        hasher.update(input.a.asBytes());
+        hasher.update(input.b.asBytes());
+        return hasher.digest();
+    }
+
     public static byte[] hash(GroupElement input) {
         var hasher = getHasher();
         hasher.update(input.asBytes());

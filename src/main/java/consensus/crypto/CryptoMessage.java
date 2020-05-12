@@ -80,14 +80,15 @@ public abstract class CryptoMessage {
                     var a_i = doc.getString("a_i");
                     proof = doc.getJSONObject("proof");
                     g = doc.getString("g");
+                    var id = doc.getString("id");
 
                     // Validate and convert to the desired format
                     var maybeProofEq = ProofEqDlogs.tryFrom(ctx, proof);
 
-                    if (a_i != null && g != null && maybeProofEq.isPresent()) {
+                    if (a_i != null && g != null && id != null && maybeProofEq.isPresent()) {
                         var a_iDecoded = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(a_i));
                         var gDecoded = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(g));
-                        return Optional.of(new DecryptShareMessage(a_iDecoded, maybeProofEq.get(), gDecoded));
+                        return Optional.of(new DecryptShareMessage(id, a_iDecoded, maybeProofEq.get(), gDecoded));
                     } else {
                         return Optional.empty();
                     }

@@ -7,10 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -21,11 +18,12 @@ public class CryptoClient implements IConsensusClient, Runnable {
     private final Map<Integer, KeygenCommitMessage> keygenCommits = new ConcurrentHashMap<>();
     private final Map<Integer, KeygenOpeningMessage> keygenOpenings = new ConcurrentHashMap<>();
     private final Map<Integer, PostVoteMessage> postVotes = new ConcurrentHashMap<>();
-    private final Map<Integer, DecryptShareMessage> decryptShares = new ConcurrentHashMap<>();
-    private final CryptoContext ctx;
+    private final Map<String, Map<Integer, DecryptShareMessage>> decryptShares = new ConcurrentHashMap<>();
 
+    private final CryptoContext ctx;
     private final int id;
     private final int peerCount;
+    private final Random rng = new Random();
 
     @Override
     public LinkedBlockingQueue<Message> getBroadcastQueue() {
@@ -48,10 +46,18 @@ public class CryptoClient implements IConsensusClient, Runnable {
                     postVotes.put(message.src, (PostVoteMessage) msg);
                     break;
                 case DECRYPT_SHARE:
-                    decryptShares.put(message.src, (DecryptShareMessage) msg);
+                    putDecryptShare(message.src, (DecryptShareMessage) msg);
                     break;
             }
         }
+    }
+
+    private void putDecryptShare(int src, DecryptShareMessage msg) {
+        if (!decryptShares.containsKey(msg.id)) {
+            decryptShares.put(msg.id, new ConcurrentHashMap<>());
+        }
+        decryptShares.get(msg.id).put(src, msg);
+
     }
 
     public CryptoClient(int id, int peerCount) {
@@ -65,12 +71,15 @@ public class CryptoClient implements IConsensusClient, Runnable {
         this.ctx = new CryptoContext(new BigInteger(p));
     }
 
+    private void unsafeSleep() {
+        try {
+            Thread.sleep(rng.nextInt(2000) + 1000);
+        } catch (InterruptedException ignored) {}
+    }
+
     @Override
     public void run() {
-        // Sleep to ensure network is live
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException ignored) {}
+        this.unsafeSleep();
         log.info("client " + id + ": online");
 
         // Generate key share
@@ -101,11 +110,13 @@ public class CryptoClient implements IConsensusClient, Runnable {
         var msg = new PostVoteMessage(ctx, keyShare, vote);
         postVotes.put(id, msg);
         queue.offer(msg.encode());
+        log.info("client " + id + ": vote posted");
 
         // Wait for other votes
         while (postVotes.size() < peerCount) {
             Thread.yield();
         }
+        this.unsafeSleep();
 
         // Check proofs
         for (var postVote : postVotes.values()) {
@@ -124,19 +135,23 @@ public class CryptoClient implements IConsensusClient, Runnable {
         var commitMessage = new KeygenCommitMessage(share);
         keygenCommits.put(id, commitMessage);
         queue.offer(commitMessage.encode());
+        log.info("client " + id + ": key generation commit posted");
 
         // Wait for other commitments
         while (keygenCommits.size() < peerCount) {
             Thread.yield();
         }
+        this.unsafeSleep();
 
         // Publish opening and wait for others
         var openingMessage = new KeygenOpeningMessage(share);
         keygenOpenings.put(id, openingMessage);
         queue.offer(openingMessage.encode());
+        log.info("client " + id + ": key generation opening posted");
         while (keygenOpenings.size() < peerCount) {
             Thread.yield();
         }
+        this.unsafeSleep();
 
         // Check openings and proofs
         for (var i : keygenOpenings.keySet()) {
@@ -159,12 +174,28 @@ public class CryptoClient implements IConsensusClient, Runnable {
 
     private Optional<List<BigInteger>> decryptVotes(KeyShare keyShare) {
         List<BigInteger> votes = new ArrayList<>();
+        Map<String, Ciphertext> ciphertexts = new HashMap<>();
 
-        for (var i : postVotes.keySet()) {
-            decryptShares.clear();
-            var decrypted = decrypt(postVotes.get(i).vote, keyShare);
+        // Publish shares for each vote
+        for (var postVoteMsg : postVotes.values()) {
+            var shareMessage = new DecryptShareMessage(ctx, keyShare, postVoteMsg.vote);
+            // Index ciphertext by ID
+            ciphertexts.put(shareMessage.id, postVoteMsg.vote);
+            putDecryptShare(id, shareMessage);
+            log.info("client " + id + ": decrypt share for " + shareMessage.id + " posted");
+            queue.offer(shareMessage.encode());
+            this.unsafeSleep();
+        }
+
+        // Wait for all shares
+        while (decryptShares.values().stream().anyMatch(shares -> shares.size() < peerCount)) {
+            Thread.yield();
+        }
+
+        // Decrypt each complete set of shares
+        for (var id : decryptShares.keySet()) {
+            var decrypted = decrypt(decryptShares.get(id), ciphertexts.get(id));
             if (decrypted.isEmpty()) {
-                log.warn("client " + id + " failed to decrypt vote from " + i);
                 return Optional.empty();
             } else {
                 votes.add(decrypted.get());
@@ -174,20 +205,10 @@ public class CryptoClient implements IConsensusClient, Runnable {
         return Optional.of(votes);
     }
 
-    private Optional<BigInteger> decrypt(Ciphertext ct, KeyShare keyShare) {
-        // Publish share and wait for others
-        var shareMessage = new DecryptShareMessage(ctx, keyShare, ct);
-        decryptShares.put(id, shareMessage);
-        queue.offer(shareMessage.encode());
-
-        // Wait for other share
-        while (decryptShares.size() < peerCount) {
-            Thread.yield();
-        }
-
+    private Optional<BigInteger> decrypt(Map<Integer, DecryptShareMessage> map, Ciphertext ct) {
         // Verify proofs
-        for (var i : decryptShares.keySet()) {
-            shareMessage = decryptShares.get(i);
+        for (var i : map.keySet()) {
+            var shareMessage = map.get(i);
             if (!shareMessage.verify(keygenOpenings.get(i).y_i, ct)) {
                 log.warn(String.format("client %d: failed to verify decrypt proof from %d", id, i));
                 return Optional.empty();
@@ -196,7 +217,7 @@ public class CryptoClient implements IConsensusClient, Runnable {
 
         // Calculate decryption factor
         var A = ctx.id();
-        for (var shareMsg : decryptShares.values()) {
+        for (var shareMsg : map.values()) {
             A = A.mul(shareMsg.a_i);
         }
 
