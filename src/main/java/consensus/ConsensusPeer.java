@@ -1,5 +1,6 @@
 package consensus;
 
+import consensus.ipc.IpcServer;
 import consensus.net.data.HostPort;
 import consensus.net.PeerListener;
 import consensus.raft.RaftActor;
@@ -17,17 +18,16 @@ import java.util.stream.Collectors;
 /**
  * Entry point for the program.
  */
-public class Program {
-    private static final Logger log = LogManager.getLogger(Program.class);
-    private static final String USAGE = "usage: java -jar consensus.jar <id>";
+public class ConsensusPeer {
+    private static final Logger log = LogManager.getLogger(ConsensusPeer.class);
+    private static final String USAGE = "usage: java -cp consensus.jar consensus.ConsensusPeer <id>";
 
     public static void main(String[] args) {
-        ConfigManager.loadProperties("consensus.properties");
-        var mode = ConfigManager.getString("mode").orElse("");
-        if (mode.equalsIgnoreCase("debug")) {
+        ConfigManager.loadProperties();
+        if (ConfigManager.isDebug()) {
             runDebug();
         } else {
-            runRelease(args);
+            runRelease();
         }
     }
 
@@ -39,7 +39,7 @@ public class Program {
                 .map(HostPort::tryFrom)
                 .collect(Collectors.toList());
         if (peerHostPorts.stream().anyMatch(Optional::isEmpty)) {
-            log.fatal("Failed parsing hosts");
+            log.fatal("failed parsing hosts");
             System.exit(-1);
         }
 
@@ -56,33 +56,21 @@ public class Program {
         for (int i = 0; i < hosts.size(); ++i) {
             final int id = i;
             var thisPeerHosts = new ArrayList<>(hosts);
-            var client = new CryptoClient(id, hosts.size());
+            var client = new IpcServer(id);
             new Thread(() -> new PeerListener(id, thisPeerHosts, new RaftActor(id, client))).start();
-            new Thread(client).start();
         }
     }
 
-    private static void runRelease(String[] args) {
-        // Check command line arguments: the first argument is this peer's ID
-        if (args.length < 1) {
-            System.out.println(USAGE);
-            // Return code 2 indicates the program was called incorrectly
-            System.exit(2);
-        }
-
-        // Check that the argument is a valid integer
-        var maybeId = Validation.tryParseUInt(args[0]);
+    private static void runRelease() {
+        var maybeId = ConfigManager.getInt("id");
         if (maybeId.isEmpty()) {
-            System.out.println(USAGE);
-            System.out.println("note: <id> must be an integer");
+            log.fatal("id must be an integer (check configuration file)");
             System.exit(2);
         }
-        var id = maybeId.get();
+        int id = maybeId.get();
 
         var hosts = loadHosts();
-        var client = new CryptoClient(id, hosts.size());
+        var client = new IpcServer(id);
         new Thread(() -> new PeerListener(id, hosts, new RaftActor(id, client))).start();
-        client.run();
-        System.exit(0);
     }
 }

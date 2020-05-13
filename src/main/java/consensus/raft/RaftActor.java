@@ -21,6 +21,7 @@ public class RaftActor extends Actor {
         while (!Thread.interrupted()) {
             // For now, simply broadcast what the client has.
             var message = client.getBroadcastQueue().take();
+            client.receiveEntry(new IncomingMessage(message, id));
             this.sendMessageToAll(message);
         }
     }

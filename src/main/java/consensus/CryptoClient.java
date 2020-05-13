@@ -1,5 +1,7 @@
 package consensus;
 import consensus.crypto.*;
+import consensus.ipc.IpcClient;
+import consensus.net.data.HostPort;
 import consensus.net.data.IncomingMessage;
 import consensus.net.data.Message;
 import consensus.util.ConfigManager;
@@ -21,7 +23,6 @@ public class CryptoClient implements IConsensusClient, Runnable {
     private final Map<String, Map<Integer, DecryptShareMessage>> decryptShares = new ConcurrentHashMap<>();
 
     private final CryptoContext ctx;
-    private final int id;
     private final int peerCount;
     private final Random rng = new Random();
 
@@ -57,11 +58,33 @@ public class CryptoClient implements IConsensusClient, Runnable {
             decryptShares.put(msg.id, new ConcurrentHashMap<>());
         }
         decryptShares.get(msg.id).put(src, msg);
-
     }
 
-    public CryptoClient(int id, int peerCount) {
-        this.id = id;
+    public static void main(String[] args) {
+        ConfigManager.loadProperties();
+        var ipcServerString = ConfigManager.getString("ipcServer");
+        if (ipcServerString.isEmpty()) {
+            System.exit(2);
+        }
+
+        var ipcServer = HostPort.tryFrom(ipcServerString.get());
+        if (ipcServer.isEmpty()) {
+            log.fatal("could not interpret address: " + ipcServerString.get());
+            System.exit(2);
+        }
+
+        var peerCount = ConfigManager.getString("hosts").orElse("").split(",").length;
+        if (peerCount == 0) {
+            log.fatal("Must have at least one peer. Check \"hosts\" in the configuration file.");
+            System.exit(2);
+        }
+        var cryptoClient = new CryptoClient(peerCount);
+        IpcClient.open(ipcServer.get(), cryptoClient);
+        cryptoClient.run();
+        System.exit(0);
+    }
+
+    public CryptoClient(int peerCount) {
         this.peerCount = peerCount;
 
         var p = ConfigManager.getString("p").orElseGet(() -> {
@@ -83,7 +106,7 @@ public class CryptoClient implements IConsensusClient, Runnable {
             Thread.sleep(10000);
         } catch (InterruptedException ignored) {}
         this.unsafeSleep();
-        log.info("client " + id + ": online");
+        log.info("online");
 
         // Generate key share
         var maybeKeyShare = generateKey(ctx);
@@ -92,10 +115,11 @@ public class CryptoClient implements IConsensusClient, Runnable {
         }
 
         var keyShare = maybeKeyShare.get();
-        log.info("client " + id + ": " + keyShare);
+        log.info("" + keyShare);
 
         // Send vote
-        if (!sendVote(keyShare, id + 10)) {
+        int vote = (int) (System.currentTimeMillis() % 1000);
+        if (!sendVote(keyShare, vote)) {
             return;
         }
 
@@ -105,15 +129,14 @@ public class CryptoClient implements IConsensusClient, Runnable {
             return;
         }
 
-        log.info("client " + id + ": result: " + maybeVotes.get());
+        log.info("result: " + maybeVotes.get());
     }
 
     private boolean sendVote(KeyShare keyShare, int vote) {
         // Send vote
         var msg = new PostVoteMessage(ctx, keyShare, vote);
-        postVotes.put(id, msg);
         queue.offer(msg.encode());
-        log.info("client " + id + ": vote posted");
+        log.info("vote posted");
 
         // Wait for other votes
         while (postVotes.size() < peerCount) {
@@ -124,7 +147,7 @@ public class CryptoClient implements IConsensusClient, Runnable {
         // Check proofs
         for (var postVote : postVotes.values()) {
             if (!postVote.verify(ctx)) {
-                log.warn("client " + id + " failed to verify others' votes");
+                log.warn("failed to verify others' votes");
                 return false;
             }
         }
@@ -136,9 +159,8 @@ public class CryptoClient implements IConsensusClient, Runnable {
         // Publish commitment and wait for others
         var share = new LocalKeygenShare(ctx);
         var commitMessage = new KeygenCommitMessage(share);
-        keygenCommits.put(id, commitMessage);
         queue.offer(commitMessage.encode());
-        log.info("client " + id + ": key generation commit posted");
+        log.info("key generation commit posted");
 
         // Wait for other commitments
         while (keygenCommits.size() < peerCount) {
@@ -148,9 +170,8 @@ public class CryptoClient implements IConsensusClient, Runnable {
 
         // Publish opening and wait for others
         var openingMessage = new KeygenOpeningMessage(share);
-        keygenOpenings.put(id, openingMessage);
         queue.offer(openingMessage.encode());
-        log.info("client " + id + ": key generation opening posted");
+        log.info("key generation opening posted");
         while (keygenOpenings.size() < peerCount) {
             Thread.yield();
         }
@@ -161,7 +182,7 @@ public class CryptoClient implements IConsensusClient, Runnable {
             var commit = keygenCommits.get(i);
             var opening = keygenOpenings.get(i);
             if (!opening.verify(commit)) {
-                log.warn(String.format("client %d: failed to verify commitment from %d", id, i));
+                log.warn(String.format("failed to verify commitment from %d", i));
                 return Optional.empty();
             }
         }
@@ -184,8 +205,7 @@ public class CryptoClient implements IConsensusClient, Runnable {
             var shareMessage = new DecryptShareMessage(ctx, keyShare, postVoteMsg.vote);
             // Index ciphertext by ID
             ciphertexts.put(shareMessage.id, postVoteMsg.vote);
-            putDecryptShare(id, shareMessage);
-            log.info("client " + id + ": decrypt share for " + shareMessage.id + " posted");
+            log.info("decrypt share for " + shareMessage.id + " posted");
             queue.offer(shareMessage.encode());
             this.unsafeSleep();
         }
@@ -213,7 +233,7 @@ public class CryptoClient implements IConsensusClient, Runnable {
         for (var i : map.keySet()) {
             var shareMessage = map.get(i);
             if (!shareMessage.verify(keygenOpenings.get(i).y_i, ct)) {
-                log.warn(String.format("client %d: failed to verify decrypt proof from %d", id, i));
+                log.warn("failed to verify decrypt proof from " + i);
                 return Optional.empty();
             }
         }

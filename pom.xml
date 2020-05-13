@@ -43,7 +43,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>consensus.Program</mainClass>
+                            <mainClass>consensus.ConsensusPeer</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

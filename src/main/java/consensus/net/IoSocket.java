@@ -25,6 +25,11 @@ public class IoSocket {
         reader = new Scanner(socket.getInputStream());
     }
 
+
+    public boolean isOpen() {
+        return !socket.isClosed();
+    }
+
     public void close() {
         try {
             socket.close();

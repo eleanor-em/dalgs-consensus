@@ -1,7 +1,10 @@
 package consensus.net.data;
 
+import consensus.net.IoSocket;
 import consensus.util.Validation;
 
+import java.io.IOException;
+import java.net.Socket;
 import java.util.Optional;
 
 public class HostPort {
@@ -11,6 +14,10 @@ public class HostPort {
     private HostPort(String address, int port) {
         this.address = address;
         this.port = port;
+    }
+
+    public IoSocket connect() throws IOException {
+        return new IoSocket(new Socket(address, port));
     }
 
     public static Optional<HostPort> tryFrom(String combined) {

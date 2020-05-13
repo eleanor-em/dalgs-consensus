@@ -57,7 +57,7 @@ public class PeerConnectService implements Runnable {
                 if (parent.isMissingPeer(id)) {
                     var dest = hosts.get(id);
                     try {
-                        var socket = new IoSocket(new Socket(dest.address, dest.port));
+                        var socket = dest.connect();
                         socket.writeLine(parent.id);
                         parent.addPeer(new Peer(parent, id, socket));
                     } catch (IOException e) {

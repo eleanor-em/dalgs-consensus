@@ -16,20 +16,28 @@ public class ConfigManager {
     private static final Logger log = LogManager.getLogger(ConfigManager.class);
     private static final OnceAssignable<PropertiesConfiguration> config = new OnceAssignable<>();
 
+    private static final String CONFIG_FILENAME = "consensus.properties";
+
     /**
-     * Load the config properties from the given filename.
+     * Load the config properties.
      * Will do nothing if the properties were already loaded.
      */
-    public static void loadProperties(String filename) {
+    public static void loadProperties() {
         FileBasedConfigurationBuilder<PropertiesConfiguration> builder =
                 new FileBasedConfigurationBuilder<>(PropertiesConfiguration.class)
-                        .configure(new Parameters().properties().setFileName(filename));
+                        .configure(new Parameters().properties().setFileName(CONFIG_FILENAME));
         try {
             config.setIfEmpty(builder.getConfiguration());
         } catch (ConfigurationException e) {
-            log.error("Failed loading configuration file \"" + filename + "\": " + e.getMessage());
+            log.error("Failed loading configuration file \"" + CONFIG_FILENAME + "\": " + e.getMessage());
             System.exit(-1);
         }
+    }
+
+    public static boolean isDebug() {
+        ConfigManager.loadProperties();
+        var mode = ConfigManager.getString("mode").orElse("");
+        return mode.equalsIgnoreCase("debug");
     }
 
     /**
