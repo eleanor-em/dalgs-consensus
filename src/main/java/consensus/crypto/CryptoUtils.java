@@ -7,32 +7,45 @@ import java.util.Base64;
 
 class CryptoUtils {
     private CryptoUtils() {}
+    private static final MessageDigest hasher;
 
-    public static MessageDigest getHasher() {
+    static {
         try {
-            return MessageDigest.getInstance("SHA-256");
+             hasher = MessageDigest.getInstance("SHA-256");
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Missing SHA-256 support");
         }
     }
 
+    public static byte[] hash(GroupElement... input) {
+        synchronized (hasher) {
+            for (var elem : input) {
+                hasher.update(elem.asBytes());
+            }
+            return hasher.digest();
+        }
+    }
+
     public static byte[] hash(BigInteger input) {
-        var hasher = getHasher();
-        hasher.update(input.toByteArray());
-        return hasher.digest();
+        synchronized (hasher) {
+            hasher.update(input.toByteArray());
+            return hasher.digest();
+        }
     }
 
     public static byte[] hash(Ciphertext input) {
-        var hasher = getHasher();
-        hasher.update(input.a.asBytes());
-        hasher.update(input.b.asBytes());
-        return hasher.digest();
+        synchronized (hasher) {
+            hasher.update(input.a.asBytes());
+            hasher.update(input.b.asBytes());
+            return hasher.digest();
+        }
     }
 
     public static byte[] hash(GroupElement input) {
-        var hasher = getHasher();
-        hasher.update(input.asBytes());
-        return hasher.digest();
+        synchronized (hasher) {
+            hasher.update(input.asBytes());
+            return hasher.digest();
+        }
     }
 
     public static String b64Encode(BigInteger x) {

@@ -6,7 +6,7 @@
 
     <groupId>au.edu.unimelb.student</groupId>
     <artifactId>consensus</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>beta</version>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>

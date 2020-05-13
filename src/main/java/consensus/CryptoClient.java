@@ -13,6 +13,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
+// TODO: Some kind of sessioning, so repeated runs of the protocol can be performed on the same ledger
 public class CryptoClient implements IConsensusClient, Runnable {
     private static final Logger log = LogManager.getLogger(CryptoClient.class);
 

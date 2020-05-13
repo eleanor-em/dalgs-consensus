@@ -3,6 +3,7 @@ package consensus.crypto;
 import org.json.JSONObject;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.Optional;
 
 class ProofEqDlogs {
@@ -44,14 +45,7 @@ class ProofEqDlogs {
     }
 
     public BigInteger getChallenge() {
-        var hasher = CryptoUtils.getHasher();
-        hasher.update(a.asBytes());
-        hasher.update(b.asBytes());
-        hasher.update(d.asBytes());
-        hasher.update(e.asBytes());
-        hasher.update(g.asBytes());
-        hasher.update(h.asBytes());
-        return new BigInteger(hasher.digest());
+        return new BigInteger(CryptoUtils.hash(a, b, d, e, g, h));
     }
 
     public JSONObject asJson() {

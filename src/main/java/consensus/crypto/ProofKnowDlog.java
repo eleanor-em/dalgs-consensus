@@ -3,6 +3,7 @@ package consensus.crypto;
 import org.json.JSONObject;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.Optional;
 
 class ProofKnowDlog {
@@ -35,11 +36,7 @@ class ProofKnowDlog {
     }
 
     public BigInteger getChallenge() {
-        var hasher = CryptoUtils.getHasher();
-        hasher.update(g.asBytes());
-        hasher.update(y.asBytes());
-        hasher.update(a.asBytes());
-        return new BigInteger(hasher.digest());
+        return new BigInteger(CryptoUtils.hash(g, y, a));
     }
 
     public JSONObject asJson() {
