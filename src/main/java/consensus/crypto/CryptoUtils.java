@@ -1,17 +1,22 @@
 package consensus.crypto;
 
+import com.google.gson.Gson;
+
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
-class CryptoUtils {
-    private CryptoUtils() {}
+public class CryptoUtils {
+    private CryptoUtils() {
+    }
+
     private static final MessageDigest hasher;
 
     static {
         try {
-             hasher = MessageDigest.getInstance("SHA-256");
+            hasher = MessageDigest.getInstance("SHA-256");
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Missing SHA-256 support");
         }
@@ -45,6 +50,18 @@ class CryptoUtils {
         synchronized (hasher) {
             hasher.update(input.asBytes());
             return hasher.digest();
+        }
+    }
+
+    public static String hash(String input) {
+        synchronized (hasher) {
+            try {
+                byte[] inputBytes = input.getBytes(StandardCharsets.UTF_8);
+                byte[] hash = hasher.digest(inputBytes);
+                return StringUtils.toHex(hash);
+            } catch (Exception exception) {
+                return "";
+            }
         }
     }
 
