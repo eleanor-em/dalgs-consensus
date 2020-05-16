@@ -19,13 +19,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class Main {
     private static final Logger log = LogManager.getLogger(ConsensusPeer.class);
     private static final String USAGE = "usage: java -cp consensus.jar consensus.ConsensusPeer <id>";
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         ConfigManager.loadProperties();
         run();
     }
@@ -48,7 +49,7 @@ public class Main {
                 .collect(Collectors.toList());
     }
 
-    private static void run() {
+    private static void run() throws InterruptedException {
         var hosts = loadHosts();
 
         List<BlockchainClient> blockchainClients = new ArrayList<>();
@@ -72,17 +73,17 @@ public class Main {
         Wallet wallet1 = wallets.get(0);
         Wallet wallet2 = wallets.get(1);
 
-        for (var blockchainClient : blockchainClients) {
-            Transaction transaction = wallet1.createTransaction(wallet2.getAddress(), 1);
-            blockchainClient.publishTransaction(transaction);
-        }
-
-        for (var blockchainClient : blockchainClients) {
-            blockchainClient.requestAllToClearTransactionPool();
-        }
-
         BlockchainClient blockchainClient1 = blockchainClients.get(0);
+        BlockchainClient blockchainClient2 = blockchainClients.get(1);
+
+
+        Transaction transaction = wallet1.createTransaction(wallet2.getAddress(), 1.5f);
+        blockchainClient1.publishTransaction(transaction);
+
+        System.out.println(blockchainClient1.readChain());
         Block block = blockchainClient1.mine();
-        System.out.println(StringUtils.toJson(block));
+        TimeUnit.SECONDS.sleep(3);
+        System.out.println(blockchainClient1.readChain());
+        System.out.println(blockchainClient2.readChain());
     }
 }

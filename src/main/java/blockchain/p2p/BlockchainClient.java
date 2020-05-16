@@ -56,7 +56,11 @@ public class BlockchainClient extends IpcServer {
         broadcast(blockchainMessage);
     }
 
-    protected void broadcast(BlockchainMessage blockchainMessage) {
+    public String readChain() {
+        return StringUtils.toJson(blockChain.getBlockList());
+    }
+
+    private void broadcast(BlockchainMessage blockchainMessage) {
         this.broadcast(new Message(StringUtils.toJson(blockchainMessage)));
     }
 }

@@ -6,7 +6,6 @@ import blockchain.transaction.Transaction;
 import blockchain.transaction.TransactionPool;
 import consensus.crypto.StringUtils;
 import consensus.net.Actor;
-import consensus.net.data.IncomingMessage;
 
 public class BlockchainActor extends Actor {
     private final int id;
@@ -21,12 +20,15 @@ public class BlockchainActor extends Actor {
     protected void task() throws InterruptedException {
         while (!Thread.interrupted()) {
             var message = blockchainClient.getBroadcastQueue().take();
-            blockchainClient.receiveEntry(new IncomingMessage(message, id));
             Blockchain blockChain = blockchainClient.getBlockChain();
             TransactionPool transactionPool = blockchainClient.getTransactionPool();
             BlockchainMessage blockchainMessage = StringUtils.fromJson(message.data, BlockchainMessage.class);
-            System.out.println(blockchainMessage.getMessageType());
-            System.out.println(blockchainMessage.getJsonData());
+            System.out.println("=======");
+            System.out.format("Node %d - %s\n", id, blockchainMessage.getMessageType());
+            if (blockchainMessage.getJsonData() != null) {
+                System.out.println(blockchainMessage.getJsonData());
+            }
+            System.out.println("=======");
             switch (blockchainMessage.getMessageType()) {
                 case REPLICATE_BLOCKCHAIN:
                     Blockchain newBlockchain = StringUtils.fromJson(blockchainMessage.getJsonData(), Blockchain.class);
