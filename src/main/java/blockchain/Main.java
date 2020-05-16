@@ -1,7 +1,10 @@
 package blockchain;
 
+import blockchain.block.BlockChain;
 import blockchain.p2p.BlockchainActor;
 import blockchain.p2p.BlockchainClient;
+import blockchain.transaction.Transaction;
+import blockchain.transaction.TransactionPool;
 import consensus.ConsensusPeer;
 import consensus.net.PeerListener;
 import consensus.net.data.HostPort;
@@ -51,7 +54,9 @@ public class Main {
         for (int i = 0; i < hosts.size(); ++i) {
             final int id = i;
             var thisPeerHosts = new ArrayList<>(hosts);
-            var p2pClient = new BlockchainClient(i);
+            var blockChain = new BlockChain();
+            var transactionPool = new TransactionPool();
+            var p2pClient = new BlockchainClient(i, blockChain, transactionPool);
             var blockchainActor = new BlockchainActor(id, p2pClient);
             new Thread(() -> {
                 new PeerListener(id, thisPeerHosts, blockchainActor);
@@ -60,7 +65,7 @@ public class Main {
         }
 
         for (var blockchainClient : blockchainClients) {
-            blockchainClient.replicateChain();
+            blockchainClient.sendTransaction(new Transaction());
         }
 
         for (var blockchainClient : blockchainClients) {

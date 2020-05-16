@@ -49,7 +49,7 @@ public class BlockChain {
         return true;
     }
 
-    public void replaceChain(BlockChain newChain) {
+    public void replaceListOfBlocks(BlockChain newChain) {
         if (this.getLength() <= newChain.getLength()) {
             return;
         }

@@ -1,24 +1,26 @@
 package blockchain.model;
 
-public class BlockchainMessage {
-    private MessageType messageType;
-    private Object data;
+import consensus.crypto.StringUtils;
 
-    public BlockchainMessage(MessageType messageType, Object data) {
+public class BlockchainMessage {
+    private final MessageType messageType;
+    private final String jsonData;
+
+    public BlockchainMessage(MessageType messageType, Object jsonData) {
         this.messageType = messageType;
-        this.data = data;
+        this.jsonData = StringUtils.toJson(jsonData);
     }
 
     public BlockchainMessage(MessageType messageType) {
         this.messageType = messageType;
-        this.data = null;
+        this.jsonData = null;
     }
 
     public MessageType getMessageType() {
         return messageType;
     }
 
-    public Object getData() {
-        return data;
+    public String getJsonData() {
+        return jsonData;
     }
 }
