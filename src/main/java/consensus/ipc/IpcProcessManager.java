@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-class IpcProcessManager {
+public class IpcProcessManager {
     private static final Logger log = LogManager.getLogger(IpcProcessManager.class);
     private final List<IpcProcess> processes = new ArrayList<>();
     private final IpcServer parent;

@@ -32,7 +32,7 @@ public class IpcServer implements IConsensusClient {
         }
     }
 
-    void broadcast(Message msg) {
+    public void broadcast(Message msg) {
         toBroadcast.offer(msg);
     }
 

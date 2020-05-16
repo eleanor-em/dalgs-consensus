@@ -2,7 +2,6 @@ package blockchain.block;
 
 import blockchain.transaction.Transaction;
 import consensus.crypto.CryptoUtils;
-import consensus.crypto.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -63,7 +62,7 @@ public class Block {
     }
 
     public static String blockHash(Block block) {
-        String blockContent = block.getTimestamp()  + block.getLastHash();
+        String blockContent = block.getTimestamp() + block.getLastHash();
         return CryptoUtils.hash(blockContent);
     }
 

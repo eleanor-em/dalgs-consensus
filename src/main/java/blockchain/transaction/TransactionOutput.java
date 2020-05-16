@@ -4,7 +4,7 @@ import java.security.PublicKey;
 
 public class TransactionOutput {
     private float amount;
-    private PublicKey address;
+    private final PublicKey address;
 
     public TransactionOutput(float amount, PublicKey address) {
         this.amount = amount;
