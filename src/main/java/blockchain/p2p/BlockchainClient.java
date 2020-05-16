@@ -1,7 +1,8 @@
 package blockchain.p2p;
 
 import blockchain.block.Block;
-import blockchain.block.BlockChain;
+import blockchain.block.Blockchain;
+import blockchain.miner.Miner;
 import blockchain.model.BlockchainMessage;
 import blockchain.model.MessageType;
 import blockchain.transaction.Transaction;
@@ -10,19 +11,19 @@ import consensus.crypto.StringUtils;
 import consensus.ipc.IpcServer;
 import consensus.net.data.Message;
 
-import java.util.List;
-
 public class BlockchainClient extends IpcServer {
-    private final BlockChain blockChain;
+    private final Blockchain blockChain;
     private final TransactionPool transactionPool;
+    private final Miner miner;
 
-    public BlockchainClient(int id, BlockChain blockChain, TransactionPool transactionPool) {
+    public BlockchainClient(int id, Blockchain blockChain, TransactionPool transactionPool) {
         super(id);
         this.blockChain = blockChain;
         this.transactionPool = transactionPool;
+        this.miner = new Miner(blockChain, transactionPool);
     }
 
-    public BlockChain getBlockChain() {
+    public Blockchain getBlockChain() {
         return blockChain;
     }
 
@@ -31,26 +32,27 @@ public class BlockchainClient extends IpcServer {
     }
 
     public Block mine() {
-        List<Transaction> validTransactions = transactionPool.filterValidTransactions();
-        Block block = blockChain.addTransactions(validTransactions);
-        replicateChain();
-        transactionPool.clear();
-        broadcastClearTransactions();
+        Block block = miner.mine();
+        if (block != null) {
+            requestAlllToReplicateBlockchain();
+            requestAllToClearTransactionPool();
+        }
         return block;
     }
 
-    private void replicateChain() {
-        BlockchainMessage blockchainMessage = new BlockchainMessage(MessageType.REPLICATE_CHAIN, blockChain);
+    private void requestAlllToReplicateBlockchain() {
+        BlockchainMessage blockchainMessage = new BlockchainMessage(MessageType.REPLICATE_BLOCKCHAIN, blockChain);
         broadcast(blockchainMessage);
     }
 
-    public void addTransaction(Transaction transaction) {
+    public void publishTransaction(Transaction transaction) {
         BlockchainMessage blockchainMessage = new BlockchainMessage(MessageType.ADD_TRANSACTION, transaction);
         broadcast(blockchainMessage);
     }
 
-    public void broadcastClearTransactions() {
-        BlockchainMessage blockchainMessage = new BlockchainMessage(MessageType.CLEAR_TRANSACTIONS);
+    public void requestAllToClearTransactionPool() {
+        transactionPool.clear();
+        BlockchainMessage blockchainMessage = new BlockchainMessage(MessageType.CLEAR_TRANSACTION_POOL);
         broadcast(blockchainMessage);
     }
 

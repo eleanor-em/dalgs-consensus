@@ -1,7 +1,7 @@
 package blockchain.model;
 
 public enum MessageType {
-    REPLICATE_CHAIN,
+    REPLICATE_BLOCKCHAIN,
     ADD_TRANSACTION,
-    CLEAR_TRANSACTIONS
+    CLEAR_TRANSACTION_POOL
 }

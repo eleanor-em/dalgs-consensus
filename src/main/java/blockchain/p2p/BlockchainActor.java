@@ -1,6 +1,6 @@
 package blockchain.p2p;
 
-import blockchain.block.BlockChain;
+import blockchain.block.Blockchain;
 import blockchain.model.BlockchainMessage;
 import blockchain.transaction.Transaction;
 import blockchain.transaction.TransactionPool;
@@ -22,21 +22,21 @@ public class BlockchainActor extends Actor {
         while (!Thread.interrupted()) {
             var message = blockchainClient.getBroadcastQueue().take();
             blockchainClient.receiveEntry(new IncomingMessage(message, id));
-            BlockChain blockChain = blockchainClient.getBlockChain();
+            Blockchain blockChain = blockchainClient.getBlockChain();
             TransactionPool transactionPool = blockchainClient.getTransactionPool();
             BlockchainMessage blockchainMessage = StringUtils.fromJson(message.data, BlockchainMessage.class);
             System.out.println(blockchainMessage.getMessageType());
             System.out.println(blockchainMessage.getJsonData());
             switch (blockchainMessage.getMessageType()) {
-                case REPLICATE_CHAIN:
-                    BlockChain newBlockChain = StringUtils.fromJson(blockchainMessage.getJsonData(), BlockChain.class);
-                    blockChain.replaceListOfBlocks(newBlockChain);
+                case REPLICATE_BLOCKCHAIN:
+                    Blockchain newBlockchain = StringUtils.fromJson(blockchainMessage.getJsonData(), Blockchain.class);
+                    blockChain.replaceListOfBlocks(newBlockchain);
                     break;
                 case ADD_TRANSACTION:
                     Transaction newTransaction = StringUtils.fromJson(blockchainMessage.getJsonData(), Transaction.class);
                     transactionPool.updateOrAddTransaction(newTransaction);
                     break;
-                case CLEAR_TRANSACTIONS:
+                case CLEAR_TRANSACTION_POOL:
                     transactionPool.clear();
                     break;
             }

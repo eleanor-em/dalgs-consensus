@@ -6,10 +6,10 @@ import consensus.crypto.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BlockChain {
+public class Blockchain {
     private List<Block> blockList = new ArrayList<>();
 
-    public BlockChain() {
+    public Blockchain() {
         this.blockList.add(Block.genesis());
     }
 
@@ -37,11 +37,11 @@ public class BlockChain {
         for (int i = 1; i < this.blockList.size(); i++) {
             Block block = this.blockList.get(i);
             Block lastBlock = this.blockList.get(i - 1);
-            if (!block.getLastHash().equals(lastBlock.getHashValue())) {
+            if (!block.getLastHash().equals(lastBlock.getBlockHash())) {
                 return false;
             }
 
-            if (!block.getHashValue().equals(Block.blockHash(block))) {
+            if (!block.getBlockHash().equals(Block.blockHash(block))) {
                 return false;
             }
         }
@@ -49,7 +49,7 @@ public class BlockChain {
         return true;
     }
 
-    public void replaceListOfBlocks(BlockChain newChain) {
+    public void replaceListOfBlocks(Blockchain newChain) {
         if (this.getLength() <= newChain.getLength()) {
             return;
         }

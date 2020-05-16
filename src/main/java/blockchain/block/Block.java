@@ -14,13 +14,13 @@ public class Block {
     private static final int MINE_RATE = ConfigManager.getInt("mineRate").orElse(10000);
     private final long timestamp;
     private final String lastHash;
-    private final String hashValue;
+    private final String blockHash;
     private final List<Transaction> transactionList;
 
-    public Block(long timestamp, String lastHash, String hashValue, List<Transaction> data) {
+    public Block(long timestamp, String lastHash, String blockHash, List<Transaction> data) {
         this.timestamp = timestamp;
         this.lastHash = lastHash;
-        this.hashValue = hashValue;
+        this.blockHash = blockHash;
         this.transactionList = data;
     }
 
@@ -32,8 +32,8 @@ public class Block {
         return lastHash;
     }
 
-    public String getHashValue() {
-        return hashValue;
+    public String getBlockHash() {
+        return blockHash;
     }
 
     public List<Transaction> getTransactionList() {
@@ -43,7 +43,7 @@ public class Block {
     public static Block mineBlock(Block lastBlock, List<Transaction> transactions) {
         String hashValue;
         long timestamp = (new Date()).getTime();
-        String lastHash = lastBlock.getHashValue();
+        String lastHash = lastBlock.getBlockHash();
         int difficulty;
         int nonce = 0;
         do {

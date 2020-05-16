@@ -1,24 +1,15 @@
 package blockchain;
 
-import blockchain.block.BlockChain;
+import blockchain.block.Blockchain;
 import blockchain.miner.Miner;
 import blockchain.transaction.TransactionPool;
 import blockchain.wallet.Wallet;
-import consensus.crypto.ECCCipher;
 import consensus.crypto.StringUtils;
 import consensus.util.ConfigManager;
 
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
-import java.util.concurrent.TimeUnit;
-
 public class Test {
     private static Wallet wallet;
-    private static BlockChain blockChain;
+    private static Blockchain blockChain;
     private static TransactionPool transactionPool;
     private static Miner miner;
 
@@ -28,9 +19,9 @@ public class Test {
     }
 
     public static void run() throws InterruptedException {
-        wallet = new Wallet();
-        blockChain = new BlockChain();
+        blockChain = new Blockchain();
         transactionPool = new TransactionPool();
+        wallet = new Wallet(blockChain, transactionPool);
         miner = new Miner(blockChain, transactionPool);
         transact();
         System.out.println(StringUtils.toJson(transactionPool));
@@ -39,16 +30,15 @@ public class Test {
         System.out.println(StringUtils.toJson(blockChain));
         transact();
         transact();
-        TimeUnit.SECONDS.sleep(9);
         miner.mine();
         System.out.println(StringUtils.toJson(blockChain));
         System.out.println(blockChain.isValidChain());
     }
 
     private static void transact() {
-        Wallet anotherWallet = new Wallet();
+        Wallet anotherWallet = new Wallet(blockChain, transactionPool);
         String recipient = wallet.getAddress();
-        anotherWallet.createTransaction(recipient, 1, blockChain, transactionPool);
-        anotherWallet.createTransaction(recipient, 1, blockChain, transactionPool);
+        anotherWallet.createTransaction(recipient, 1);
+        anotherWallet.createTransaction(recipient, 1);
     }
 }

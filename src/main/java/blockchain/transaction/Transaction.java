@@ -49,7 +49,7 @@ public class Transaction {
             return;
         }
 
-        if (amount > wallet.getAmount()) {
+        if (amount > wallet.getBalance()) {
             System.out.println("Not enough money!!! Cannot create a transaction!!!");
             return;
         }
@@ -72,12 +72,12 @@ public class Transaction {
     }
 
     public static Transaction newTransaction(Wallet wallet, String recipient, float amount) {
-        if (amount > wallet.getAmount()) {
+        if (amount > wallet.getBalance()) {
             return null;
         }
 
         List<TransactionOutput> transactionOutputs = new ArrayList<>();
-        transactionOutputs.add(new TransactionOutput(wallet.getAmount() - amount, wallet.getAddress()));
+        transactionOutputs.add(new TransactionOutput(wallet.getBalance() - amount, wallet.getAddress()));
         transactionOutputs.add(new TransactionOutput(amount, recipient));
         return Transaction.transactionWithOutputs(wallet, transactionOutputs);
     }

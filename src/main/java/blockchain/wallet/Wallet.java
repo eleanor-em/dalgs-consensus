@@ -1,7 +1,7 @@
 package blockchain.wallet;
 
 import blockchain.block.Block;
-import blockchain.block.BlockChain;
+import blockchain.block.Blockchain;
 import blockchain.transaction.Transaction;
 import blockchain.transaction.TransactionInput;
 import blockchain.transaction.TransactionOutput;
@@ -20,33 +20,38 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class Wallet {
-    private static final float INITIAL_AMOUNT = ConfigManager.getInt("initialBalance").orElse(10);
-    private float amount;
+    private static final float INITIAL_BALANCE = ConfigManager.getInt("initialBalance").orElse(0);
+    private float balance;
     private final PublicKey publicKey;
     private final PrivateKey privateKey;
+    private final Blockchain blockchain;
+    private final TransactionPool transactionPool;
 
-    public Wallet() {
-        this.amount = INITIAL_AMOUNT;
+    public Wallet(Blockchain blockchain, TransactionPool transactionPool) {
+        balance = INITIAL_BALANCE;
         KeyPair keyPair = ECCCipher.generateKeyPair();
-        this.publicKey = keyPair.getPublic();
-        this.privateKey = keyPair.getPrivate();
+        publicKey = keyPair.getPublic();
+        privateKey = keyPair.getPrivate();
+        this.blockchain = blockchain;
+        this.transactionPool = transactionPool;
     }
 
-    public float getAmount() {
-        return amount;
+    public float getBalance() {
+        return balance;
     }
 
     public String getAddress() {
         return ECCCipher.publicKeyToHex(publicKey);
     }
 
-    public Transaction createTransaction(String recipient, float amount, BlockChain blockchain, TransactionPool transactionPool) {
-        this.amount = this.calculateBalance(blockchain);
-        if (amount > this.amount) {
+    public Transaction createTransaction(String recipient, float amount) {
+        balance = calculateBalance();
+        if (amount > balance) {
+            System.out.println("Your wallet does not have enough money!!!");
             return null;
         }
 
-        Transaction transaction = transactionPool.existingTransaction(this.getAddress());
+        Transaction transaction = transactionPool.existingTransaction(getAddress());
         if (transaction != null) {
             transaction.update(this, recipient, amount);
         } else {
@@ -67,7 +72,7 @@ public class Wallet {
             List<TransactionOutput> transactionOutputs = transaction.getTransactionOutputs();
             String data = CryptoUtils.hash(StringUtils.toJson(transactionOutputs));
             byte[] signature = sign(data);
-            TransactionInput transactionInput = new TransactionInput(timestamp, getAddress(), amount, signature);
+            TransactionInput transactionInput = new TransactionInput(timestamp, getAddress(), balance, signature);
             transaction.setTransactionInput(transactionInput);
             return true;
         } catch (Exception e) {
@@ -75,11 +80,11 @@ public class Wallet {
         }
     }
 
-    public float calculateBalance(BlockChain blockChain) {
-        float balance = this.amount;
+    public float calculateBalance() {
+        float balance = this.balance;
 
         List<Transaction> allTransactions = new ArrayList<>();
-        List<Block> blockList = blockChain.getBlockList();
+        List<Block> blockList = blockchain.getBlockList();
         for (Block block : blockList) {
             List<Transaction> transactionList = block.getTransactionList();
             allTransactions.addAll(transactionList);
