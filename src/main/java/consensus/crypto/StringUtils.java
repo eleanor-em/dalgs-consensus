@@ -1,6 +1,14 @@
 package consensus.crypto;
 
+import blockchain.model.BlockchainMessage;
+import blockchain.model.MessageType;
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+import consensus.net.data.Message;
+
+import java.io.Reader;
+import java.io.StringReader;
+import java.lang.reflect.Type;
 
 public class StringUtils {
     public static String toHex(byte[] hash) {
@@ -17,5 +25,10 @@ public class StringUtils {
     public static String toJson(Object object) {
         Gson gson = new Gson();
         return gson.toJson(object);
+    }
+
+    public static <T> T fromJson(String json, Type typeOfT) {
+        Gson gson = new Gson();
+        return gson.fromJson(json, typeOfT);
     }
 }

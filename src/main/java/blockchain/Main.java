@@ -59,8 +59,12 @@ public class Main {
             blockchainClients.add(p2pClient);
         }
 
-        for (var p2pClient : blockchainClients) {
-            p2pClient.broadcast(new Message("Hello"));
+        for (var blockchainClient : blockchainClients) {
+            blockchainClient.replicateChain();
+        }
+
+        for (var blockchainClient : blockchainClients) {
+            blockchainClient.broadcastClearTransactions();
         }
     }
 }
