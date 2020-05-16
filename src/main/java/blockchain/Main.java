@@ -8,7 +8,6 @@ import blockchain.transaction.TransactionPool;
 import consensus.ConsensusPeer;
 import consensus.net.PeerListener;
 import consensus.net.data.HostPort;
-import consensus.net.data.Message;
 import consensus.util.ConfigManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -56,16 +55,16 @@ public class Main {
             var thisPeerHosts = new ArrayList<>(hosts);
             var blockChain = new BlockChain();
             var transactionPool = new TransactionPool();
-            var p2pClient = new BlockchainClient(i, blockChain, transactionPool);
-            var blockchainActor = new BlockchainActor(id, p2pClient);
+            var blockchainClient = new BlockchainClient(i, blockChain, transactionPool);
+            var blockchainActor = new BlockchainActor(id, blockchainClient);
             new Thread(() -> {
                 new PeerListener(id, thisPeerHosts, blockchainActor);
             }).start();
-            blockchainClients.add(p2pClient);
+            blockchainClients.add(blockchainClient);
         }
 
         for (var blockchainClient : blockchainClients) {
-            blockchainClient.sendTransaction(new Transaction());
+            blockchainClient.addTransaction(new Transaction());
         }
 
         for (var blockchainClient : blockchainClients) {

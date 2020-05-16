@@ -50,7 +50,7 @@ public class Transaction {
         }
 
         if (amount > wallet.getAmount()) {
-            System.out.println("Not enough money!!!");
+            System.out.println("Not enough money!!! Cannot create a transaction!!!");
             return;
         }
 

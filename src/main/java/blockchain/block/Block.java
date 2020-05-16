@@ -11,7 +11,7 @@ import java.util.List;
 
 public class Block {
     private static final int INITIAL_POW_DIFFICULTY = ConfigManager.getInt("initialPowDifficulty").orElse(0);
-    private static final int MINE_RATE = ConfigManager.getInt("mineRate").orElse(100000);
+    private static final int MINE_RATE = ConfigManager.getInt("mineRate").orElse(10000);
     private final long timestamp;
     private final String lastHash;
     private final String hashValue;

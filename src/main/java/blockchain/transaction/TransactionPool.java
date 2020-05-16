@@ -1,6 +1,5 @@
 package blockchain.transaction;
 
-import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;

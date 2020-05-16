@@ -18,7 +18,6 @@ public class Miner {
 
     public Block mine() {
         List<Transaction> validTransactions = transactionPool.filterValidTransactions();
-        // TODO: implement p2p here:
         return blockChain.addTransactions(validTransactions);
     }
 }
