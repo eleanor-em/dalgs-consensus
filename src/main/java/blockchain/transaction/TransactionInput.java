@@ -27,7 +27,6 @@ public class TransactionInput {
 
     public PublicKey getPublicKey() throws Exception {
         return ECCCipher.hexToPublicKey(address);
-
     }
 
     public float getAmount() {

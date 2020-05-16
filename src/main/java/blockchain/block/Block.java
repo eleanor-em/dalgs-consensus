@@ -2,6 +2,7 @@ package blockchain.block;
 
 import blockchain.transaction.Transaction;
 import consensus.crypto.CryptoUtils;
+import consensus.util.ConfigManager;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -9,8 +10,8 @@ import java.util.List;
 
 
 public class Block {
-    private static final int DIFFICULTY = 0;
-    private static final int MINE_RATE = 500000;
+    private static final int INITIAL_POW_DIFFICULTY = ConfigManager.getInt("initialPowDifficulty").orElse(0);
+    private static final int MINE_RATE = ConfigManager.getInt("mineRate").orElse(100000);
     private final long timestamp;
     private final String lastHash;
     private final String hashValue;
@@ -43,21 +44,24 @@ public class Block {
         String hashValue;
         long timestamp = (new Date()).getTime();
         String lastHash = lastBlock.getHashValue();
-        int difficulty = 1; // adjust this
+        int difficulty;
         int nonce = 0;
         do {
             nonce++;
-            difficulty = Block.adjustDifficulty(lastBlock, timestamp); // #TODO: update this
-            String sum = timestamp + lastHash; // #TODO: add nonce to make POW
+            difficulty = Block.adjustDifficulty(lastBlock, timestamp);
+            String sum = timestamp + lastHash + nonce;
             hashValue = CryptoUtils.hash(sum);
-        } while (!hashValue.substring(0, DIFFICULTY).equals("0".repeat(DIFFICULTY)));
+        } while (!hashValue.substring(0, difficulty).equals("0".repeat(difficulty)));
+        System.out.format("Solved the POW problem (difficulty=%d) with %d attempts\n", difficulty, nonce);
 
-        return new Block(timestamp, lastHash, hashValue, transactions);
+        String blockHash = CryptoUtils.hash(timestamp + lastHash);
+
+        return new Block(timestamp, lastHash, blockHash, transactions);
     }
 
-    public static int adjustDifficulty(Block block, double currentTime) {
-        int difficulty = 0;
-        difficulty = block.getTimestamp() + MINE_RATE > currentTime ? difficulty + 1 : difficulty - 1;
+    public static int adjustDifficulty(Block block, long currentTime) {
+        int difficulty = INITIAL_POW_DIFFICULTY;
+        difficulty = (block.getTimestamp() + MINE_RATE) > currentTime ? difficulty + 1 : difficulty - 1;
         return difficulty;
     }
 

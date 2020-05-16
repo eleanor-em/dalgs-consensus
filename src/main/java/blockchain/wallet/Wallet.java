@@ -9,6 +9,7 @@ import blockchain.transaction.TransactionPool;
 import consensus.crypto.CryptoUtils;
 import consensus.crypto.ECCCipher;
 import consensus.crypto.StringUtils;
+import consensus.util.ConfigManager;
 
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -19,7 +20,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class Wallet {
-    private static final float INITIAL_AMOUNT = 50.0f;
+    private static final float INITIAL_AMOUNT = ConfigManager.getInt("initialBalance").orElse(10);
     private float amount;
     private final PublicKey publicKey;
     private final PrivateKey privateKey;
