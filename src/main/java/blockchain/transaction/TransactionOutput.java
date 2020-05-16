@@ -1,12 +1,10 @@
 package blockchain.transaction;
 
-import java.security.PublicKey;
-
 public class TransactionOutput {
     private float amount;
-    private final PublicKey address;
+    private final String address;
 
-    public TransactionOutput(float amount, PublicKey address) {
+    public TransactionOutput(float amount, String address) {
         this.amount = amount;
         this.address = address;
     }
@@ -19,7 +17,7 @@ public class TransactionOutput {
         this.amount = amount;
     }
 
-    public PublicKey getAddress() {
+    public String getAddress() {
         return address;
     }
 }

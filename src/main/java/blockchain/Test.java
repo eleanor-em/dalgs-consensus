@@ -4,9 +4,15 @@ import blockchain.block.BlockChain;
 import blockchain.miner.Miner;
 import blockchain.transaction.TransactionPool;
 import blockchain.wallet.Wallet;
+import consensus.crypto.ECCCipher;
 import consensus.crypto.StringUtils;
 
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 
 public class Test {
     private static Wallet wallet;
@@ -14,7 +20,7 @@ public class Test {
     private static TransactionPool transactionPool;
     private static Miner miner;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws NoSuchAlgorithmException, InvalidKeySpecException {
         wallet = new Wallet();
         blockChain = new BlockChain();
         transactionPool = new TransactionPool();
@@ -34,7 +40,7 @@ public class Test {
 
     private static void transact() {
         Wallet anotherWallet = new Wallet();
-        PublicKey recipient = wallet.getAddress();
+        String recipient = wallet.getAddress();
         anotherWallet.createTransaction(recipient, 1, blockChain, transactionPool);
         anotherWallet.createTransaction(recipient, 1, blockChain, transactionPool);
     }

@@ -24,7 +24,7 @@ public class TransactionPool {
         }
     }
 
-    public Transaction existingTransaction(PublicKey address) {
+    public Transaction existingTransaction(String address) {
         return transactionList.stream()
                 .filter(transaction -> transaction.getTransactionInput().getAddress().equals(address))
                 .findAny()

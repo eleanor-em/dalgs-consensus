@@ -1,7 +1,5 @@
 package consensus.crypto;
 
-import com.google.gson.Gson;
-
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -58,7 +56,7 @@ public class CryptoUtils {
             try {
                 byte[] inputBytes = input.getBytes(StandardCharsets.UTF_8);
                 byte[] hash = hasher.digest(inputBytes);
-                return StringUtils.toHex(hash);
+                return StringUtils.byteArrayToHex(hash);
             } catch (Exception exception) {
                 return "";
             }

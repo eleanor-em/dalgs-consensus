@@ -39,7 +39,7 @@ public class Transaction {
         this.transactionOutputs = transactionOutputs;
     }
 
-    public void update(Wallet wallet, PublicKey recipient, float amount) {
+    public void update(Wallet wallet, String recipient, float amount) {
         TransactionOutput senderOutput = this.transactionOutputs.stream()
                 .filter(t -> t.getAddress().equals(wallet.getAddress()))
                 .findAny()
@@ -61,7 +61,7 @@ public class Transaction {
 
     public static boolean verifyTransaction(Transaction transaction) {
         try {
-            PublicKey address = transaction.getTransactionInput().getAddress();
+            PublicKey address = transaction.getTransactionInput().getPublicKey();
             byte[] signature = transaction.getTransactionInput().getSignature();
             List<TransactionOutput> transactionOutputs = transaction.getTransactionOutputs();
             String dataHash = CryptoUtils.hash(StringUtils.toJson(transactionOutputs));
@@ -71,7 +71,7 @@ public class Transaction {
         }
     }
 
-    public static Transaction newTransaction(Wallet wallet, PublicKey recipient, float amount) {
+    public static Transaction newTransaction(Wallet wallet, String recipient, float amount) {
         if (amount > wallet.getAmount()) {
             return null;
         }

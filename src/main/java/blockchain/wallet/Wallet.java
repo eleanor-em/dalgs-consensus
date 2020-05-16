@@ -21,31 +21,31 @@ import java.util.stream.Collectors;
 public class Wallet {
     private static final float INITIAL_AMOUNT = 50.0f;
     private float amount;
-    private final PrivateKey key;
-    private final PublicKey address;
+    private final PublicKey publicKey;
+    private final PrivateKey privateKey;
 
     public Wallet() {
         this.amount = INITIAL_AMOUNT;
         KeyPair keyPair = ECCCipher.generateKeyPair();
-        this.address = keyPair.getPublic();
-        this.key = keyPair.getPrivate();
+        this.publicKey = keyPair.getPublic();
+        this.privateKey = keyPair.getPrivate();
     }
 
     public float getAmount() {
         return amount;
     }
 
-    public PublicKey getAddress() {
-        return address;
+    public String getAddress() {
+        return ECCCipher.publicKeyToHex(publicKey);
     }
 
-    public Transaction createTransaction(PublicKey recipient, float amount, BlockChain blockchain, TransactionPool transactionPool) {
+    public Transaction createTransaction(String recipient, float amount, BlockChain blockchain, TransactionPool transactionPool) {
         this.amount = this.calculateBalance(blockchain);
         if (amount > this.amount) {
             return null;
         }
 
-        Transaction transaction = transactionPool.existingTransaction(this.address);
+        Transaction transaction = transactionPool.existingTransaction(this.getAddress());
         if (transaction != null) {
             transaction.update(this, recipient, amount);
         } else {
@@ -57,7 +57,7 @@ public class Wallet {
     }
 
     private byte[] sign(String data) throws Exception {
-        return ECCCipher.sign(key, data);
+        return ECCCipher.sign(privateKey, data);
     }
 
     public boolean signTransaction(Transaction transaction) {
@@ -66,7 +66,7 @@ public class Wallet {
             List<TransactionOutput> transactionOutputs = transaction.getTransactionOutputs();
             String data = CryptoUtils.hash(StringUtils.toJson(transactionOutputs));
             byte[] signature = sign(data);
-            TransactionInput transactionInput = new TransactionInput(timestamp, address, amount, signature);
+            TransactionInput transactionInput = new TransactionInput(timestamp, getAddress(), amount, signature);
             transaction.setTransactionInput(transactionInput);
             return true;
         } catch (Exception e) {
@@ -85,7 +85,7 @@ public class Wallet {
         }
 
         allTransactions = allTransactions.stream()
-                .filter(transaction -> transaction.getTransactionInput().getAddress().equals(address))
+                .filter(transaction -> transaction.getTransactionInput().getAddress().equals(getAddress()))
                 .collect(Collectors.toList());
 
         double startTime = 0.0f;
@@ -95,7 +95,7 @@ public class Wallet {
                             prev.getTransactionInput().getTimestamp() > current.getTransactionInput().getTimestamp() ? prev : current)
                     .get();
             TransactionOutput transactionOutput = recentTransaction.getTransactionOutputs().stream()
-                    .filter(output -> output.getAddress().equals(this.address)).findAny().orElse(null);
+                    .filter(output -> output.getAddress().equals(getAddress())).findAny().orElse(null);
             if (transactionOutput != null) {
                 balance = transactionOutput.getAmount();
                 startTime = recentTransaction.getTransactionInput().getTimestamp();
@@ -106,7 +106,7 @@ public class Wallet {
             if (transaction.getTransactionInput().getTimestamp() > startTime) {
                 List<TransactionOutput> transactionOutputs = transaction.getTransactionOutputs();
                 for (TransactionOutput transactionOutput : transactionOutputs) {
-                    if (transactionOutput.getAddress().equals(this.address)) {
+                    if (transactionOutput.getAddress().equals(getAddress())) {
                         balance += transactionOutput.getAmount();
                     }
                 }
