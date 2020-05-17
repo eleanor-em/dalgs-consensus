@@ -1,4 +1,4 @@
-package consensus.crypto;
+package consensus.util;
 
 import com.google.gson.Gson;
 
@@ -33,6 +33,6 @@ public class StringUtils {
 
     public static <T> T fromJson(String json, Type typeOfT) {
         Gson gson = new Gson();
-        return gson.fromJson(json, typeOfT);
+        return new Gson().fromJson(json, typeOfT);
     }
 }

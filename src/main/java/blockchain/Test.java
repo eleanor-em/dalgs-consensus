@@ -4,7 +4,7 @@ import blockchain.block.Blockchain;
 import blockchain.miner.Miner;
 import blockchain.transaction.TransactionPool;
 import blockchain.wallet.Wallet;
-import consensus.crypto.StringUtils;
+import consensus.util.StringUtils;
 import consensus.util.ConfigManager;
 
 public class Test {

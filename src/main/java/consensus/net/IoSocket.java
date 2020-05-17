@@ -48,19 +48,22 @@ public class IoSocket {
     }
 
     public void writeLine(String data) throws IOException {
-        synchronized (writer) {
+//        synchronized (writer) {
+//            log.debug("write to " + socket.getPort() + ": " + data);
             writer.write(data + "\n");
             writer.flush();
-        }
+//        }
     }
 
     public Optional<String> readLine() {
-        synchronized (reader) {
+//        synchronized (reader) {
             if (reader.hasNextLine()) {
-                return Optional.of(reader.nextLine());
+                var data = reader.nextLine();
+//                log.debug("read from " + socket.getPort() + ": " + data);
+                return Optional.of(data);
             } else {
                 return Optional.empty();
             }
-        }
+//        }
     }
 }

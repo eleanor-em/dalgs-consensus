@@ -8,7 +8,7 @@ import blockchain.transaction.TransactionOutput;
 import blockchain.transaction.TransactionPool;
 import consensus.crypto.CryptoUtils;
 import consensus.crypto.EccSignature;
-import consensus.crypto.StringUtils;
+import consensus.util.StringUtils;
 import consensus.util.ConfigManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

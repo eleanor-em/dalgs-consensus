@@ -8,7 +8,7 @@ import blockchain.transaction.Transaction;
 import blockchain.transaction.TransactionPool;
 import blockchain.wallet.Wallet;
 import consensus.IConsensusClient;
-import consensus.crypto.StringUtils;
+import consensus.util.StringUtils;
 import consensus.net.Actor;
 import consensus.net.data.IncomingMessage;
 import consensus.net.data.Message;
@@ -120,7 +120,7 @@ public class BlockchainActor extends Actor {
         this.sendToClient(transaction, id);
     }
 
-    public void requestAllToClearTransactionPool() {
+    private void requestAllToClearTransactionPool() {
         transactionPool.clear();
         BlockchainMessage blockchainMessage = new BlockchainMessage(MessageType.CLEAR_TRANSACTION_POOL);
         broadcast(blockchainMessage);

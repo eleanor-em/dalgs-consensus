@@ -4,7 +4,7 @@ import blockchain.wallet.Wallet;
 import consensus.crypto.CryptoUtils;
 import consensus.crypto.EccException;
 import consensus.crypto.EccSignature;
-import consensus.crypto.StringUtils;
+import consensus.util.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

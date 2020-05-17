@@ -1,5 +1,7 @@
 package consensus.crypto;
 
+import consensus.util.StringUtils;
+
 import java.security.*;
 import java.security.spec.ECGenParameterSpec;
 import java.security.spec.InvalidKeySpecException;

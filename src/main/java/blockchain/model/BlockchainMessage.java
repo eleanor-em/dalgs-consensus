@@ -1,6 +1,6 @@
 package blockchain.model;
 
-import consensus.crypto.StringUtils;
+import consensus.util.StringUtils;
 
 public class BlockchainMessage {
     private final MessageType messageType;

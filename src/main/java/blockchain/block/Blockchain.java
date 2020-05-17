@@ -1,7 +1,7 @@
 package blockchain.block;
 
 import blockchain.transaction.Transaction;
-import consensus.crypto.StringUtils;
+import consensus.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
