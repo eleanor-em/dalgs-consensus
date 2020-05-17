@@ -7,16 +7,14 @@ import blockchain.transaction.TransactionInput;
 import blockchain.transaction.TransactionOutput;
 import blockchain.transaction.TransactionPool;
 import consensus.crypto.CryptoUtils;
-import consensus.crypto.ECCCipher;
+import consensus.crypto.EccSignature;
 import consensus.crypto.StringUtils;
 import consensus.util.ConfigManager;
 
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class Wallet {
@@ -29,7 +27,7 @@ public class Wallet {
 
     public Wallet(Blockchain blockchain, TransactionPool transactionPool) {
         balance = INITIAL_BALANCE;
-        KeyPair keyPair = ECCCipher.generateKeyPair();
+        KeyPair keyPair = EccSignature.generateKeyPair();
         publicKey = keyPair.getPublic();
         privateKey = keyPair.getPrivate();
         this.blockchain = blockchain;
@@ -41,29 +39,28 @@ public class Wallet {
     }
 
     public String getAddress() {
-        return ECCCipher.publicKeyToHex(publicKey);
+        return EccSignature.publicKeyToHex(publicKey);
     }
 
-    public Transaction createTransaction(String recipient, float amount) {
+    public Optional<Transaction> createTransaction(String recipient, float amount) {
         balance = calculateBalance();
         if (amount > balance) {
-            System.out.println("Your wallet does not have enough money!!!");
-            return null;
+            System.out.println("Your wallet does not have enough money!");
+            return Optional.empty();
         }
 
-        Transaction transaction = transactionPool.existingTransaction(getAddress());
-        if (transaction != null) {
-            transaction.update(this, recipient, amount);
-        } else {
-            transaction = Transaction.newTransaction(this, recipient, amount);
-            transactionPool.updateOrAddTransaction(transaction);
-        }
+        var maybeTrans = transactionPool.existingTransaction(getAddress());
+        maybeTrans.ifPresentOrElse(
+                trans -> trans.update(this, recipient, amount),
+                () -> Transaction.newTransaction(this, recipient, amount)
+                        .ifPresent(transactionPool::updateOrAddTransaction)
+        );
 
-        return transaction;
+        return maybeTrans;
     }
 
     private byte[] sign(String data) throws Exception {
-        return ECCCipher.sign(privateKey, data);
+        return EccSignature.sign(privateKey, data);
     }
 
     public boolean signTransaction(Transaction transaction) {
@@ -91,25 +88,36 @@ public class Wallet {
         }
 
         allTransactions = allTransactions.stream()
-                .filter(transaction -> transaction.getTransactionInput().getAddress().equals(getAddress()))
+                .filter(transaction -> transaction.getTransactionInput()
+                        .map(TransactionInput::getAddress)
+                        .orElse("")
+                        .equals(getAddress()))
                 .collect(Collectors.toList());
 
         double startTime = 0.0f;
         if (allTransactions.size() > 0) {
-            Transaction recentTransaction = allTransactions.stream()
-                    .reduce((prev, current) ->
-                            prev.getTransactionInput().getTimestamp() > current.getTransactionInput().getTimestamp() ? prev : current)
+            Transaction recentTx = allTransactions.stream()
+                    .max(Comparator.comparingLong(tx -> tx.getTransactionInput()
+                            .map(TransactionInput::getTimestamp)
+                            .orElse(0L)))
                     .get();
-            TransactionOutput transactionOutput = recentTransaction.getTransactionOutputs().stream()
-                    .filter(output -> output.getAddress().equals(getAddress())).findAny().orElse(null);
-            if (transactionOutput != null) {
-                balance = transactionOutput.getAmount();
-                startTime = recentTransaction.getTransactionInput().getTimestamp();
+            var txOutput = recentTx.getTransactionOutputs().stream()
+                    .filter(output -> output.getAddress().equals(getAddress()))
+                    .findAny();
+
+            if (txOutput.isPresent()) {
+                balance = txOutput.get().getAmount();
+                startTime = recentTx.getTransactionInput()
+                        .map(TransactionInput::getTimestamp)
+                        .orElse(0L);
             }
         }
 
         for (Transaction transaction : allTransactions) {
-            if (transaction.getTransactionInput().getTimestamp() > startTime) {
+            double finalStartTime = startTime;
+            if (transaction.getTransactionInput()
+                    .map(in -> in.getTimestamp() > finalStartTime)
+                    .orElse(false)) {
                 List<TransactionOutput> transactionOutputs = transaction.getTransactionOutputs();
                 for (TransactionOutput transactionOutput : transactionOutputs) {
                     if (transactionOutput.getAddress().equals(getAddress())) {

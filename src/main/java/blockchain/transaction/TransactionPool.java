@@ -2,6 +2,7 @@ package blockchain.transaction;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class TransactionPool {
@@ -12,22 +13,23 @@ public class TransactionPool {
     }
 
     public void updateOrAddTransaction(Transaction newTransaction) {
-        Transaction existingTransaction = this.transactionList.stream()
+        var existing = this.transactionList.stream()
                 .filter(t -> t.getId().equals(newTransaction.getId()))
-                .findAny()
-                .orElse(null);
-        if (existingTransaction != null) {
-            transactionList.set(this.transactionList.indexOf(existingTransaction), newTransaction);
-        } else {
-            transactionList.add(newTransaction);
-        }
+                .findAny();
+
+        existing.ifPresentOrElse(
+                trans -> transactionList.set(this.transactionList.indexOf(trans), newTransaction),
+                () -> transactionList.add(newTransaction)
+        );
     }
 
-    public Transaction existingTransaction(String address) {
+    public Optional<Transaction> existingTransaction(String address) {
         return transactionList.stream()
-                .filter(transaction -> transaction.getTransactionInput().getAddress().equals(address))
-                .findAny()
-                .orElse(null);
+                .filter(transaction -> transaction.getTransactionInput()
+                        .map(TransactionInput::getAddress)
+                        .orElse("")
+                        .equals(address))
+                .findAny();
     }
 
     public List<Transaction> filterValidTransactions() {
@@ -37,7 +39,8 @@ public class TransactionPool {
                     .reduce(0.0f, Float::sum);
 
 
-            if (transaction.getTransactionInput().getAmount() != outputTotal) {
+            if (transaction.getTransactionInput().isEmpty() ||
+                    transaction.getTransactionInput().get().getAmount() != outputTotal) {
                 return false;
             }
 

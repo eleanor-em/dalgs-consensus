@@ -6,6 +6,7 @@ import blockchain.transaction.Transaction;
 import blockchain.transaction.TransactionPool;
 
 import java.util.List;
+import java.util.Optional;
 
 public class Miner {
     private final Blockchain blockchain;
@@ -16,12 +17,12 @@ public class Miner {
         this.transactionPool = transactionPool;
     }
 
-    public Block mine() {
+    public Optional<Block> mine() {
         List<Transaction> validTransactions = transactionPool.filterValidTransactions();
         if (validTransactions.size() > 0) {
-            return blockchain.addTransactions(validTransactions);
+            return Optional.of(blockchain.addTransactions(validTransactions));
         } else {
-            return null;
+            return Optional.empty();
         }
     }
 }

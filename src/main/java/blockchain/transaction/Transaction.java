@@ -2,20 +2,20 @@ package blockchain.transaction;
 
 import blockchain.wallet.Wallet;
 import consensus.crypto.CryptoUtils;
-import consensus.crypto.ECCCipher;
+import consensus.crypto.EccException;
+import consensus.crypto.EccSignature;
 import consensus.crypto.StringUtils;
 
-import java.security.PublicKey;
 import java.util.*;
 
 public class Transaction {
     private final String id;
-    private TransactionInput transactionInput;
+    private Optional<TransactionInput> transactionInput;
     private List<TransactionOutput> transactionOutputs;
 
     public Transaction() {
         this.id = UUID.randomUUID().toString();
-        this.transactionInput = null;
+        this.transactionInput = Optional.empty();
         this.transactionOutputs = new ArrayList<>();
     }
 
@@ -23,12 +23,12 @@ public class Transaction {
         return id;
     }
 
-    public TransactionInput getTransactionInput() {
+    public Optional<TransactionInput> getTransactionInput() {
         return transactionInput;
     }
 
     public void setTransactionInput(TransactionInput transactionInput) {
-        this.transactionInput = transactionInput;
+        this.transactionInput = Optional.of(transactionInput);
     }
 
     public List<TransactionOutput> getTransactionOutputs() {
@@ -60,20 +60,25 @@ public class Transaction {
     }
 
     public static boolean verifyTransaction(Transaction transaction) {
+        var maybeTxInput = transaction.getTransactionInput();
+        if (maybeTxInput.isEmpty()) {
+            return false;
+        }
+
         try {
-            PublicKey address = transaction.getTransactionInput().getPublicKey();
-            byte[] signature = transaction.getTransactionInput().getSignature();
+            var pubkey = maybeTxInput.get().getPublicKey();
+            var signature = maybeTxInput.get().getSignature();
             List<TransactionOutput> transactionOutputs = transaction.getTransactionOutputs();
             String dataHash = CryptoUtils.hash(StringUtils.toJson(transactionOutputs));
-            return ECCCipher.verifySignature(address, signature, dataHash);
-        } catch (Exception e) {
+            return EccSignature.verifySignature(pubkey, signature, dataHash);
+        } catch (EccException e) {
             return false;
         }
     }
 
-    public static Transaction newTransaction(Wallet wallet, String recipient, float amount) {
+    public static Optional<Transaction> newTransaction(Wallet wallet, String recipient, float amount) {
         if (amount > wallet.getBalance()) {
-            return null;
+            return Optional.empty();
         }
 
         List<TransactionOutput> transactionOutputs = new ArrayList<>();
@@ -82,13 +87,13 @@ public class Transaction {
         return Transaction.transactionWithOutputs(wallet, transactionOutputs);
     }
 
-    public static Transaction transactionWithOutputs(Wallet wallet, List<TransactionOutput> transactionOutputs) {
+    public static Optional<Transaction> transactionWithOutputs(Wallet wallet, List<TransactionOutput> transactionOutputs) {
         Transaction transaction = new Transaction();
         transaction.setTransactionOutputs(transactionOutputs);
         if (wallet.signTransaction(transaction)) {
-            return transaction;
+            return Optional.of(transaction);
         } else {
-            return null;
+            return Optional.empty();
         }
     }
 }

@@ -13,7 +13,7 @@ public class BlockchainMessage {
 
     public BlockchainMessage(MessageType messageType) {
         this.messageType = messageType;
-        this.jsonData = null;
+        this.jsonData = "{}";
     }
 
     public MessageType getMessageType() {

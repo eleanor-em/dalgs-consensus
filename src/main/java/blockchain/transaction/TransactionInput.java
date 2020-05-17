@@ -1,6 +1,7 @@
 package blockchain.transaction;
 
-import consensus.crypto.ECCCipher;
+import consensus.crypto.EccException;
+import consensus.crypto.EccSignature;
 
 import java.security.PublicKey;
 
@@ -25,8 +26,8 @@ public class TransactionInput {
         return address;
     }
 
-    public PublicKey getPublicKey() throws Exception {
-        return ECCCipher.hexToPublicKey(address);
+    public PublicKey getPublicKey() throws EccException {
+        return EccSignature.hexToPublicKey(address);
     }
 
     public float getAmount() {

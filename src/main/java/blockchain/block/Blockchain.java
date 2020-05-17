@@ -50,14 +50,10 @@ public class Blockchain {
     }
 
     public void replaceListOfBlocks(Blockchain newChain) {
-        if (this.getLength() <= newChain.getLength()) {
-            return;
+        // Eleanor: I'm pretty sure this was the wrong way around. It used to be "if not this.len <= new.len", which
+        // doesn't make sense.
+        if (this.getLength() < newChain.getLength() && newChain.isValidChain()) {
+            this.blockList = newChain.getBlockList();
         }
-
-        if (newChain.isValidChain()) {
-            return;
-        }
-
-        this.blockList = newChain.getBlockList();
     }
 }
