@@ -38,9 +38,9 @@ public class LeaderRaftState extends AbstractRaftState {
             var args = new AppendEntriesArgs(currentTerm, id, -1, 0, new ArrayList<>(), commitIndex);
             this.sendMessageToAll(new RpcMessage(args).encoded());
             try {
-                Thread.sleep((int) (Math.random() * 2000));
-            } catch (InterruptedException ignored) {
-            }
+                // sleep random amount of time to simulate unreliable connection
+                Thread.sleep((int) (Math.random() * 170 * Timer.TIME_SCALE));
+            } catch (InterruptedException ignored) {}
 
             return this;
         }
@@ -49,7 +49,6 @@ public class LeaderRaftState extends AbstractRaftState {
     @Override
     protected void onAppendEntries(AppendEntriesArgs args) {
         if (args.term > currentTerm) {
-            log.debug(id + ": append term higher: " + args.term  + " vs " + currentTerm);
             shouldBecomeFollower = true;
         }
     }
@@ -57,7 +56,6 @@ public class LeaderRaftState extends AbstractRaftState {
     @Override
     protected void onRequestVote(RequestVoteArgs args) {
         if (args.term > currentTerm) {
-            log.debug(id + ": request term higher: " + args.term  + " vs " + currentTerm);
             shouldBecomeFollower = true;
         }
     }
@@ -65,7 +63,6 @@ public class LeaderRaftState extends AbstractRaftState {
     @Override
     protected void onReceiveResult(RpcResult result) {
         if (result.currentTerm > currentTerm) {
-            log.debug(id + ": result term higher: " + result.currentTerm  + " vs " + currentTerm);
             shouldBecomeFollower = true;
         }
     }

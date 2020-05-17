@@ -45,7 +45,7 @@ public abstract class AbstractRaftState {
         }
     }
 
-    public void rpcAppendEntries(AppendEntriesArgs args) {
+    public synchronized void rpcAppendEntries(AppendEntriesArgs args) {
         onAppendEntries(args);
 
         RpcResult result = RpcResult.success(id, currentTerm);
@@ -110,8 +110,7 @@ public abstract class AbstractRaftState {
 
     protected abstract void onAppendEntries(AppendEntriesArgs args);
 
-    public void rpcRequestVote(RequestVoteArgs args) {
-        log.debug(id + ": receive RequestVote");
+    public synchronized void rpcRequestVote(RequestVoteArgs args) {
         onRequestVote(args);
         RpcResult result;
 
@@ -124,9 +123,10 @@ public abstract class AbstractRaftState {
                 votedFor = Optional.empty();
             }
 
-            if (votedFor.map(id -> id == args.candidateId).orElse(true)
+            if ((votedFor.isEmpty() || votedFor.get() == args.candidateId)
                     && args.lastLogIndex >= this.lastLogIndex) {
-                votedFor = Optional.of(id);
+                log.debug(id + ": voted for " + args.candidateId + " in term " + currentTerm);
+                votedFor = Optional.of(args.candidateId);
                 result = RpcResult.success(id, currentTerm);
             } else {
                 result = RpcResult.failure(id, currentTerm);
@@ -189,7 +189,7 @@ public abstract class AbstractRaftState {
         actor.sendMessageToAll(message);
     }
 
-    public void rpcReceiveResult(RpcResult result) {
+    public synchronized void rpcReceiveResult(RpcResult result) {
         onReceiveResult(result);
 
         if (result.currentTerm > currentTerm) {

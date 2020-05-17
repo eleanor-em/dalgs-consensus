@@ -36,7 +36,5 @@ class FollowerRaftState extends AbstractRaftState {
     }
 
     @Override
-    protected void onReceiveResult(RpcResult result) {
-
-    }
+    protected void onReceiveResult(RpcResult result) {}
 }
