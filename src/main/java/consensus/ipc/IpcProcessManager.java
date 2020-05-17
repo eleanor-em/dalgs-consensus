@@ -53,9 +53,10 @@ public class IpcProcessManager {
                     processes.add(p);
                 }
             }
+            log.warn("IPC server socket closed");
         } catch (IOException e) {
             e.printStackTrace();
-            log.fatal("server socket closed");
+            log.fatal("IPC server socket died");
             System.exit(-1);
         }
     }

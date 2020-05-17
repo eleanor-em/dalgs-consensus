@@ -3,6 +3,8 @@ package blockchain.block;
 import blockchain.transaction.Transaction;
 import consensus.crypto.CryptoUtils;
 import consensus.util.ConfigManager;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -10,6 +12,7 @@ import java.util.List;
 
 
 public class Block {
+    private static final Logger log = LogManager.getLogger(Block.class);
     private static final int INITIAL_POW_DIFFICULTY = ConfigManager.getInt("initialPowDifficulty").orElse(0);
     private static final int MINE_RATE = ConfigManager.getInt("mineRate").orElse(10000);
     private final long timestamp;
@@ -52,7 +55,7 @@ public class Block {
             String sum = timestamp + lastHash + nonce;
             hashValue = CryptoUtils.hash(sum);
         } while (!hashValue.substring(0, difficulty).equals("0".repeat(difficulty)));
-        System.out.format("Solved the POW problem (difficulty=%d) with %d attempts\n", difficulty, nonce);
+        log.debug(String.format("Solved the POW problem (difficulty=%d) with %d attempt(s)", difficulty, nonce));
 
         String blockHash = CryptoUtils.hash(timestamp + lastHash);
 

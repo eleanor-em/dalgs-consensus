@@ -23,7 +23,7 @@ public class TransactionPool {
         );
     }
 
-    public Optional<Transaction> existingTransaction(String address) {
+    public Optional<Transaction> getExistingTransaction(String address) {
         return transactionList.stream()
                 .filter(transaction -> transaction.getTransactionInput()
                         .map(TransactionInput::getAddress)

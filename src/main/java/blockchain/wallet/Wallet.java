@@ -10,6 +10,8 @@ import consensus.crypto.CryptoUtils;
 import consensus.crypto.EccSignature;
 import consensus.crypto.StringUtils;
 import consensus.util.ConfigManager;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.security.KeyPair;
 import java.security.PrivateKey;
@@ -18,6 +20,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class Wallet {
+    private static final Logger log = LogManager.getLogger(Wallet.class);
     private static final float INITIAL_BALANCE = ConfigManager.getInt("initialBalance").orElse(0);
     private float balance;
     private final PublicKey publicKey;
@@ -45,11 +48,11 @@ public class Wallet {
     public Optional<Transaction> createTransaction(String recipient, float amount) {
         balance = calculateBalance();
         if (amount > balance) {
-            System.out.println("Your wallet does not have enough money!");
+            log.warn("Your wallet does not have enough money!");
             return Optional.empty();
         }
 
-        var maybeTrans = transactionPool.existingTransaction(getAddress());
+        var maybeTrans = transactionPool.getExistingTransaction(getAddress());
         maybeTrans.ifPresentOrElse(
                 trans -> trans.update(this, recipient, amount),
                 () -> Transaction.newTransaction(this, recipient, amount)

@@ -5,17 +5,20 @@ import consensus.crypto.CryptoUtils;
 import consensus.crypto.EccException;
 import consensus.crypto.EccSignature;
 import consensus.crypto.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 
 public class Transaction {
+    private static final Logger log = LogManager.getLogger(Transaction.class);
     private final String id;
-    private Optional<TransactionInput> transactionInput;
+    private TransactionInput transactionInput;
     private List<TransactionOutput> transactionOutputs;
 
     public Transaction() {
         this.id = UUID.randomUUID().toString();
-        this.transactionInput = Optional.empty();
+        this.transactionInput = null;
         this.transactionOutputs = new ArrayList<>();
     }
 
@@ -24,11 +27,11 @@ public class Transaction {
     }
 
     public Optional<TransactionInput> getTransactionInput() {
-        return transactionInput;
+        return Optional.ofNullable(transactionInput);
     }
 
     public void setTransactionInput(TransactionInput transactionInput) {
-        this.transactionInput = Optional.of(transactionInput);
+        this.transactionInput = transactionInput;
     }
 
     public List<TransactionOutput> getTransactionOutputs() {
@@ -50,7 +53,7 @@ public class Transaction {
         }
 
         if (amount > wallet.getBalance()) {
-            System.out.println("Not enough money!!! Cannot create a transaction!!!");
+            log.warn("Not enough money! Cannot create a transaction.");
             return;
         }
 

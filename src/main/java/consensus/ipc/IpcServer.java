@@ -15,7 +15,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * resulting distributed ledger to an external entity connected to a port.
  */
 public class IpcServer implements IConsensusClient {
-//    private static final Logger log = LogManager.getLogger(IpcServer.class);
+    private static final Logger log = LogManager.getLogger(IpcServer.class);
     private final List<IncomingMessage> received = new ArrayList<>();
     private final LinkedBlockingQueue<Message> toBroadcast = new LinkedBlockingQueue<>();
     private final IpcProcessManager processManager;

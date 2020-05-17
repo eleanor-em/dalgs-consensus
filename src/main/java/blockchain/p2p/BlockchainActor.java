@@ -12,11 +12,14 @@ import consensus.crypto.StringUtils;
 import consensus.net.Actor;
 import consensus.net.data.IncomingMessage;
 import consensus.net.data.Message;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class BlockchainActor extends Actor {
+    private static final Logger log = LogManager.getLogger(BlockchainActor.class);
     private final int id;
     private final IConsensusClient client;
     private final LinkedBlockingQueue<IncomingMessage> messages = new LinkedBlockingQueue<>();
@@ -38,8 +41,12 @@ public class BlockchainActor extends Actor {
         new Thread(this::mineThread).start();
     }
 
-    public Wallet getWallet() {
-        return wallet;
+    public void createTransaction(String address, float amount) {
+        wallet.createTransaction(address, amount);
+    }
+
+    public String getAddress() {
+        return wallet.getAddress();
     }
 
     private void mineThread() {
@@ -48,6 +55,8 @@ public class BlockchainActor extends Actor {
                 TimeUnit.SECONDS.sleep(3);
                 var maybeBlock = miner.mine();
                 if (maybeBlock.isPresent()) {
+                    // Send to client
+                    maybeBlock.get().getTransactionList().forEach(tx -> this.sendToClient(tx, id));
                     requestAllToReplicateBlockchain();
                     requestAllToClearTransactionPool();
                 }
@@ -70,21 +79,25 @@ public class BlockchainActor extends Actor {
             try {
                 var message = messages.take();
                 BlockchainMessage blockchainMessage = StringUtils.fromJson(message.msg.data, BlockchainMessage.class);
-                System.out.println("=======");
-                System.out.format("Node %d - %s\n", id, blockchainMessage.getMessageType());
-                if (blockchainMessage.getJsonData() != null) {
-                    System.out.println(blockchainMessage.getJsonData());
-                }
-                System.out.println("=======");
+
                 switch (blockchainMessage.getMessageType()) {
                     case REPLICATE_BLOCKCHAIN:
+                        int priorLength = blockchain.getLength();
                         Blockchain newBlockchain = StringUtils.fromJson(blockchainMessage.getJsonData(), Blockchain.class);
                         blockchain.replaceListOfBlocks(newBlockchain);
+                        log.debug(id + ": blockchain replicated");
+                        for (int i = priorLength; i < newBlockchain.getLength(); ++i) {
+                            newBlockchain.getBlockList()
+                                    .get(i)
+                                    .getTransactionList()
+                                    .forEach(tx -> this.sendToClient(tx, id));
+                        }
                         break;
                     case ADD_TRANSACTION:
                         Transaction newTransaction = StringUtils.fromJson(blockchainMessage.getJsonData(), Transaction.class);
                         transactionPool.updateOrAddTransaction(newTransaction);
-                        client.receiveEntry(new IncomingMessage(new Message(StringUtils.toJson(newTransaction.getTransactionOutputs())), message.src));
+                        log.debug(id + ": transaction added");
+                        this.sendToClient(newTransaction, message.src);
                         break;
                     case CLEAR_TRANSACTION_POOL:
                         transactionPool.clear();
@@ -94,6 +107,10 @@ public class BlockchainActor extends Actor {
         }
     }
 
+    private void sendToClient(Transaction tx, int src) {
+        log.debug(id + ": sent transaction to client");
+        client.receiveEntry(new IncomingMessage(new Message(StringUtils.toJson(tx.getTransactionOutputs())), src));
+    }
 
     private void requestAllToReplicateBlockchain() {
         BlockchainMessage blockchainMessage = new BlockchainMessage(MessageType.REPLICATE_BLOCKCHAIN, blockchain);
@@ -101,8 +118,10 @@ public class BlockchainActor extends Actor {
     }
 
     public void publishTransaction(Transaction transaction) {
+        log.debug("Publishing a tx");
         BlockchainMessage blockchainMessage = new BlockchainMessage(MessageType.ADD_TRANSACTION, transaction);
         broadcast(blockchainMessage);
+        this.sendToClient(transaction, id);
     }
 
     public void requestAllToClearTransactionPool() {
