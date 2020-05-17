@@ -67,21 +67,22 @@ public class ConsensusPeer {
             new Thread(() -> new PeerListener(id, thisPeerHosts, blockchainActor)).start();
 //            new Thread(() -> new PeerListener(id, thisPeerHosts, new RaftActor(id, client))).start();
         }
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException ignored) {}
 
-        actors.get(0).createTransaction(actors.get(1).getAddress(), 1.5f);
+        do {
+            var src = (int) (Math.random() * actors.size());
+            int dest = src;
+            while (dest == src) {
+                dest = (int) (Math.random() * actors.size());
+            }
 
-        log.info(actors.get(0).readChain());
-        log.info(actors.get(1).readChain());
+            var amt = (float) (Math.random());
+            actors.get(src).createTransaction(actors.get(dest).getAddress(), amt);
+            log.info(src + " -> " + dest + ": " + amt);
 
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException ignored) {}
-
-        log.info(actors.get(0).readChain());
-        log.info(actors.get(1).readChain());
+            try {
+                Thread.sleep(2000 + (int) (3000 * Math.random()));
+            } catch (InterruptedException ignored) {}
+        } while (!Thread.interrupted());
     }
 
     private static void runRelease() {

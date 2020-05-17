@@ -85,7 +85,6 @@ public class BlockchainActor extends Actor {
                         int priorLength = blockchain.getLength();
                         Blockchain newBlockchain = StringUtils.fromJson(blockchainMessage.getJsonData(), Blockchain.class);
                         blockchain.replaceListOfBlocks(newBlockchain);
-                        log.debug(id + ": blockchain replicated");
                         for (int i = priorLength; i < newBlockchain.getLength(); ++i) {
                             newBlockchain.getBlockList()
                                     .get(i)
@@ -96,7 +95,6 @@ public class BlockchainActor extends Actor {
                     case ADD_TRANSACTION:
                         Transaction newTransaction = StringUtils.fromJson(blockchainMessage.getJsonData(), Transaction.class);
                         transactionPool.updateOrAddTransaction(newTransaction);
-                        log.debug(id + ": transaction added");
                         this.sendToClient(newTransaction, message.src);
                         break;
                     case CLEAR_TRANSACTION_POOL:
@@ -108,7 +106,6 @@ public class BlockchainActor extends Actor {
     }
 
     private void sendToClient(Transaction tx, int src) {
-        log.debug(id + ": sent transaction to client");
         client.receiveEntry(new IncomingMessage(new Message(StringUtils.toJson(tx.getTransactionOutputs())), src));
     }
 
@@ -118,7 +115,6 @@ public class BlockchainActor extends Actor {
     }
 
     public void publishTransaction(Transaction transaction) {
-        log.debug("Publishing a tx");
         BlockchainMessage blockchainMessage = new BlockchainMessage(MessageType.ADD_TRANSACTION, transaction);
         broadcast(blockchainMessage);
         this.sendToClient(transaction, id);
