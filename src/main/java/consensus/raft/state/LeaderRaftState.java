@@ -44,13 +44,14 @@ public class LeaderRaftState extends AbstractRaftState {
             // Check if follower needs an update
             int followerNextIndex = this.nextIndex.get(followerId);
             if (lastLogIndex >= followerNextIndex) {
-                // Send update to follower
+                // Find the most recent entry the follower has seen
                 var prevLogIndex = followerNextIndex - 1;
                 var prevLogTerm = 0;
                 if (prevLogIndex > 0) {
                     prevLogTerm = this.ledger.get(prevLogIndex).term;
                 }
 
+                // Fill the ledger with the entrie sthe follower needs
                 var dest = followerId;
                 var newEntries = new ArrayList<LedgerEntry>();
                 for (int i = prevLogIndex + 1; i <= lastLogIndex; ++i) {
@@ -58,6 +59,7 @@ public class LeaderRaftState extends AbstractRaftState {
                     newEntries.add(ledger.get(i));
                 }
 
+                // Send the RPC
                 var args = new AppendEntriesArgs(this.currentTerm, this.id, prevLogIndex, prevLogTerm,
                         newEntries, this.commitIndex);
                 this.sendMessage(new RpcMessage(args), dest, result -> {
@@ -81,6 +83,7 @@ public class LeaderRaftState extends AbstractRaftState {
     }
 
     private void updateCommit() {
+        // Update the committed index if we can.
         for (int n = this.commitIndex + 1; n <= this.lastLogIndex; ++n) {
             int finalN = n;
             int numMatched = (int) this.matchIndex.stream()
@@ -95,6 +98,7 @@ public class LeaderRaftState extends AbstractRaftState {
 
     @Override
     protected AbstractRaftState onTick() {
+        // Update the consensus state
         synchronized (lock) {
             updateFollowers();
             updateCommit();
@@ -105,6 +109,7 @@ public class LeaderRaftState extends AbstractRaftState {
             Thread.sleep((int) (Math.random() * sleepTime * Timer.TIME_SCALE));
         } catch (InterruptedException ignored) {}
 
+        // Check if we should yield leadership
         synchronized (lock) {
             if (shouldBecomeFollower) {
                 log.debug(id + ": yielding leadership");
@@ -119,8 +124,8 @@ public class LeaderRaftState extends AbstractRaftState {
     public void rpcReceiveEntry(String entry) {
         var maybeMessage = IncomingMessage.tryFrom(entry);
         if (maybeMessage.isPresent()) {
+            // Add the message to our ledger
             synchronized (lock) {
-                // Add the message to our ledger
                 var message = maybeMessage.get();
                 ++this.lastLogIndex;
                 log.debug(id + ": leader received entry #" + this.lastLogIndex
