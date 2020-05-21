@@ -36,7 +36,7 @@ public abstract class AbstractRaftState {
     private static final Logger log = LogManager.getLogger(AbstractRaftState.class);
     private final Actor actor;
     private final IConsensusClient client;
-    private final Object lock = new Object();
+    protected final Object lock = new Object();
 
     // Handle RPC returns
     private final Map<String, CallbackWrapper> onReturn = new HashMap<>();
@@ -54,6 +54,7 @@ public abstract class AbstractRaftState {
     protected int commitIndex = 0;
     protected int lastApplied = 0;
     protected int leaderId = 0;
+    protected boolean shouldBecomeFollower = false;
 
     AbstractRaftState(int id, int serverCount, Actor actor, IConsensusClient client) {
         this.id = id;
@@ -62,57 +63,67 @@ public abstract class AbstractRaftState {
         this.client = client;
     }
 
+    private void yield(int newTerm) {
+        shouldBecomeFollower = true;
+        currentTerm = newTerm;
+        votedFor = Optional.empty();
+    }
+
+    protected void onRpc() {}
+
     public void rpcAppendEntries(String uuid, AppendEntriesArgs args) {
         synchronized (lock) {
-            onAppendEntries(args);
-
+            onRpc();
             RpcResult result = RpcResult.success(uuid, id, currentTerm);
 
             if (args.term < currentTerm) {
                 log.warn(id + ": failed AppendEntries due to outdated term");
                 result = RpcResult.failure(uuid, id, currentTerm);
             } else {
+                // Check if we're behind
                 if (args.term > currentTerm) {
-                    currentTerm = args.term;
+                    this.yield(args.term);
+                }
+
+                // Check if there is a new leader
+                if (this.leaderId != args.leaderId) {
+                    log.debug(id + ": new leader: " + args.leaderId);
+                    this.leaderId = args.leaderId;
                 }
 
                 if (!args.entries.isEmpty()) {
-                    // Check consistency of logs; first
-                    if (args.prevLogIndex > 0 && args.prevLogTerm > 0
-                        && (!ledger.containsKey(args.prevLogIndex) || ledger.get(args.prevLogIndex).term != args.prevLogTerm)) {
-                        log.warn(id + ": failed AppendEntries due to inconsistent logs: " + args.prevLogIndex + ", " + args.prevLogTerm);
-                        result = RpcResult.failure(uuid, id, currentTerm);
-                    } else {
-                        for (var newEntry : args.entries) {
-                            if (ledger.containsKey(newEntry.index) && ledger.get(newEntry.index).term != newEntry.term) {
-                                log.warn(id + ": incorrect ledger: index " + newEntry.index + " has term "
-                                        + newEntry.term + " != " + ledger.get(newEntry.index).term
-                                        + ", truncating");
-                                lastLogIndex = newEntry.index - 1;
-                                if (lastLogIndex > 0) {
-                                    lastLogTerm = ledger.get(lastLogIndex).term;
-                                } else {
-                                    lastLogTerm = 0;
-                                }
-                                // Truncate the log
-                                for (var key : ledger.keySet()) {
-                                    if (key >= newEntry.index) {
-                                        ledger.remove(key);
-                                    }
+                    log.debug(id + ": received entries: " + args.entries);
+                }
+
+                // Check consistency of logs: first, check the leader has the right assumptions about us.
+                if (args.prevLogIndex > 0 && args.prevLogTerm > 0
+                    && (!ledger.containsKey(args.prevLogIndex) || ledger.get(args.prevLogIndex).term != args.prevLogTerm)) {
+                    log.warn(id + ": failed AppendEntries due to inconsistent logs: " + args.prevLogIndex + ", " + args.prevLogTerm);
+                    result = RpcResult.failure(uuid, id, currentTerm);
+                } else {
+                    // Next, check if our log needs to be truncated to come in line with the leader's.
+                    for (var newEntry : args.entries) {
+                        log.debug(id + ": checking entry #" + newEntry.index);
+                        if (ledger.containsKey(newEntry.index) && ledger.get(newEntry.index).term != newEntry.term) {
+                            log.warn(id + ": incorrect ledger: index " + newEntry.index + " has term "
+                                    + newEntry.term + " != " + ledger.get(newEntry.index).term
+                                    + ", truncating");
+                            lastLogIndex = newEntry.index - 1;
+                            if (lastLogIndex > 0) {
+                                lastLogTerm = ledger.get(lastLogIndex).term;
+                            } else {
+                                lastLogTerm = 0;
+                            }
+                            // Truncate the log
+                            for (var key : ledger.keySet()) {
+                                if (key >= newEntry.index) {
+                                    ledger.remove(key);
                                 }
                             }
                         }
-                        updateLog(args);
                     }
-                }
-
-                if (result.success) {
-                    if (this.commitIndex != args.leaderCommit) {
-                        log.debug(id + ": follower committed to index " + args.leaderCommit);
-                    }
-
-                    this.leaderId = args.leaderId;
-                    this.commitIndex = args.leaderCommit;
+                    // Finally, update our log.
+                    updateLog(args);
                 }
             }
 
@@ -121,50 +132,45 @@ public abstract class AbstractRaftState {
     }
 
     private void updateLog(AppendEntriesArgs args) {
-        int lastNewIndex = -1;
-        int lastNewTerm = -1;
+        // Default values are such that no change is made when there are no new entries
+        int lastNewIndex = lastLogIndex;
+        int lastNewTerm = lastLogTerm;
 
         for (var newEntry : args.entries) {
-            if (newEntry.index > lastLogIndex) {
-                if (newEntry.index > lastNewIndex) {
-                    lastNewIndex = newEntry.index;
-                }
-                if (newEntry.term > lastNewTerm) {
-                    lastNewTerm = newEntry.term;
-                }
-                log.debug(id + ": appending entry #" + newEntry.index + ": " + newEntry.message.msg.data);
-                ledger.put(newEntry.index, newEntry);
+            if (newEntry.index > lastNewIndex) {
+                lastNewIndex = newEntry.index;
             }
+            if (newEntry.term > lastNewTerm) {
+                lastNewTerm = newEntry.term;
+            }
+            log.debug(id + ": appending entry #" + newEntry.index + ": " + newEntry.message.msg.data);
+            ledger.put(newEntry.index, newEntry);
         }
 
-        if (lastNewIndex > this.lastLogIndex) {
-            this.lastLogIndex = lastNewIndex;
-        }
-        if (lastNewTerm > this.lastLogTerm) {
-            this.lastLogTerm = lastNewTerm;
-        }
+        this.lastLogIndex = lastNewIndex;
+        this.lastLogTerm = lastNewTerm;
 
-        if (args.leaderCommit > commitIndex) {
-            commitIndex = Math.min(args.leaderCommit, lastNewIndex);
+        // Update the commit index; do nothing if there is no change.
+        var newCommitIndex = Math.min(args.leaderCommit, lastNewIndex);
+        if (args.leaderCommit > commitIndex && newCommitIndex > commitIndex) {
+            commitIndex = newCommitIndex;
+            log.debug(id + ": follower committed to index " + commitIndex);
         }
     }
 
-    protected abstract void onAppendEntries(AppendEntriesArgs args);
-
     public void rpcRequestVote(String uuid, RequestVoteArgs args) {
         synchronized (lock) {
-            onRequestVote(args);
+            onRpc();
             RpcResult result;
 
             if (args.term < currentTerm) {
                 result = RpcResult.failure(uuid, id, currentTerm);
             } else {
                 if (args.term > currentTerm) {
-                    currentTerm = args.term;
-                    votedFor = Optional.empty();
+                    this.yield(args.term);
                 }
 
-                if ((votedFor.isEmpty() || votedFor.get() == args.candidateId)
+                if (votedFor.map(candidateId -> candidateId == args.candidateId).orElse(true)
                         && args.lastLogIndex >= this.lastLogIndex) {
                     log.debug(id + ": voted for " + args.candidateId + " in term " + currentTerm);
                     votedFor = Optional.of(args.candidateId);
@@ -177,8 +183,6 @@ public abstract class AbstractRaftState {
             sendMessage(new RpcMessage(result), args.candidateId);
         }
     }
-
-    protected abstract void onRequestVote(RequestVoteArgs args);
 
     public AbstractRaftState tick() {
         synchronized (lock) {
@@ -205,17 +209,16 @@ public abstract class AbstractRaftState {
         state.ledger = ledger;
         state.lastLogIndex = lastLogIndex;
         state.lastLogTerm = lastLogTerm;
+        state.shouldBecomeFollower = false;
     }
 
     protected AbstractRaftState asFollower() {
-        log.debug(id + ": convert to follower");
         var state = new FollowerRaftState(id, serverCount, actor, client);
         copyState(state);
         return state;
     }
 
     protected AbstractRaftState asCandidate() {
-        log.debug(id + ": convert to candidate");
         var state = new CandidateRaftState(id, serverCount, actor, client);
         copyState(state);
         state.startElection();
@@ -226,6 +229,7 @@ public abstract class AbstractRaftState {
         log.debug(id + ": convert to leader");
         var state = new LeaderRaftState(id, serverCount, actor, client);
         copyState(state);
+        state.heartbeat();
         return state;
     }
 
@@ -257,7 +261,7 @@ public abstract class AbstractRaftState {
 
         if (result.currentTerm > currentTerm) {
             log.debug(id + ": result had higher term: " + result.currentTerm + " vs " + currentTerm);
-            currentTerm = result.currentTerm;
+            this.yield(result.currentTerm);
         }
     }
 

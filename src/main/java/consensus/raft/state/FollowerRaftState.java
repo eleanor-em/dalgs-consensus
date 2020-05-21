@@ -17,21 +17,18 @@ class FollowerRaftState extends AbstractRaftState {
     }
 
     @Override
-    protected void onAppendEntries(AppendEntriesArgs args) {
-        timer.reset();
-    }
-
-    @Override
-    protected void onRequestVote(RequestVoteArgs args) {
+    protected void onRpc() {
         timer.reset();
     }
 
     @Override
     protected AbstractRaftState onTick() {
-        if (timer.expired()) {
-            return this.asCandidate();
-        } else {
-            return this;
+        synchronized (lock) {
+            if (timer.expired()) {
+                return this.asCandidate();
+            } else {
+                return this;
+            }
         }
     }
 }
