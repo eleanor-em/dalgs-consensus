@@ -38,19 +38,19 @@ public abstract class CryptoMessage {
             if (maybeKind.isEmpty()) {
                 return Optional.empty();
             }
-            var sessionId = doc.getString("session_id");
-            if (sessionId == null) {
+            var sessionId = doc.optString("session_id");
+            if (sessionId.length() == 0) {
                 return Optional.empty();
             }
 
             switch (maybeKind.get()) {
                 case KEYGEN_COMMIT:
                     // Extract the data
-                    var commitment = doc.getString("commitment");
-                    var g = doc.getString("g");
+                    var commitment = doc.optString("commitment");
+                    var g = doc.optString("g");
 
                     // Validate and convert to the desired format
-                    if (commitment != null && g != null) {
+                    if (commitment.length() > 0 && g.length() > 0) {
                         var decodedCommit = CryptoUtils.b64Decode(commitment);
                         var decodedGenerator = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(g));
                         return Optional.of(new KeygenCommitMessage(sessionId, decodedCommit, decodedGenerator));
@@ -60,13 +60,13 @@ public abstract class CryptoMessage {
 
                 case KEYGEN_OPENING:
                     // Extract the data
-                    var y_i = doc.getString("y_i");
-                    var proof = doc.getJSONObject("proof");
+                    var y_i = doc.optString("y_i");
+                    var proof = doc.optJSONObject("proof");
 
                     // Validate and convert to the desired format
                     var maybeProofKnow = ProofKnowDlog.tryFrom(ctx, proof);
 
-                    if (y_i != null && maybeProofKnow.isPresent()) {
+                    if (y_i.length() > 0 && maybeProofKnow.isPresent()) {
                         var y_iActual = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(y_i));
                         return Optional.of(new KeygenOpeningMessage(sessionId, y_iActual, maybeProofKnow.get()));
                     } else {
@@ -84,10 +84,10 @@ public abstract class CryptoMessage {
 
                 case DECRYPT_SHARE:
                     // Extract the data
-                    var a_i = doc.getString("a_i");
-                    proof = doc.getJSONObject("proof");
-                    g = doc.getString("g");
-                    var id = doc.getString("id");
+                    var a_i = doc.optString("a_i");
+                    proof = doc.optJSONObject("proof");
+                    g = doc.optString("g");
+                    var id = doc.optString("id");
 
                     // Validate and convert to the desired format
                     var maybeProofEq = ProofEqDlogs.tryFrom(ctx, proof);

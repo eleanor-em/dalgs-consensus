@@ -52,12 +52,12 @@ class ProofKnowDlog {
             return Optional.empty();
         }
 
-        var gStr = obj.getString("g");
-        var yStr = obj.getString("y");
-        var aStr = obj.getString("a");
-        var rStr = obj.getString("r");
+        var gStr = obj.optString("g");
+        var yStr = obj.optString("y");
+        var aStr = obj.optString("a");
+        var rStr = obj.optString("r");
 
-        if (gStr != null && yStr != null && aStr != null && rStr != null) {
+        if (gStr.length() > 0 && yStr.length() > 0 && aStr.length() > 0 && rStr.length() > 0) {
             var g = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(gStr));
             var y = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(yStr));
             var a = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(aStr));
