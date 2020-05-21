@@ -4,8 +4,10 @@ import consensus.net.data.Message;
 import consensus.util.StringUtils;
 
 import java.util.Optional;
+import java.util.UUID;
 
 public class RpcMessage {
+    public final String uuid = UUID.randomUUID().toString();
     public final RpcMessageKind kind;
     public final String payload;
 
@@ -22,6 +24,11 @@ public class RpcMessage {
     public RpcMessage(RpcResult result) {
         this.kind = RpcMessageKind.RESULT;
         this.payload = StringUtils.toJson(result);
+    }
+
+    public RpcMessage(String entry) {
+        this.kind = RpcMessageKind.NEW_ENTRY;
+        this.payload = entry;
     }
 
     public Message encoded() {

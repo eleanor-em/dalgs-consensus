@@ -9,19 +9,27 @@ import consensus.util.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-/**
- * Stub class
- */
 public class RaftActor extends Actor {
     private static final Logger log = LogManager.getLogger(RaftActor.class);
     private final int id;
-    private final IConsensusClient client;
     private AbstractRaftState state;
 
     public RaftActor(int id, int serverCount, IConsensusClient client) {
         this.id = id;
-        this.client = client;
         state = AbstractRaftState.create(id, serverCount, this, client);
+        new Thread(() -> monitorBroadcastQueue(client)).start();
+    }
+
+    private void monitorBroadcastQueue(IConsensusClient client) {
+        var queue = client.getBroadcastQueue();
+        while (!Thread.interrupted()) {
+            try {
+                var message = queue.take();
+                log.debug(id + ": received entry: " + message);
+                var wrapped = new IncomingMessage(message, id);
+                state.rpcReceiveEntry(wrapped.encoded());
+            } catch (InterruptedException ignored) {}
+        }
     }
 
     protected void task() {
@@ -36,13 +44,16 @@ public class RaftActor extends Actor {
         var decoded = (RpcMessage) StringUtils.fromJson(message.msg.data, RpcMessage.class);
         switch (decoded.kind) {
             case APPEND_ENTRIES:
-                decoded.decodeAppendEntries().ifPresent(state::rpcAppendEntries);
+                decoded.decodeAppendEntries().ifPresent(args -> state.rpcAppendEntries(decoded.uuid, args));
                 break;
             case REQUEST_VOTE:
-                decoded.decodeRequestVote().ifPresent(state::rpcRequestVote);
+                decoded.decodeRequestVote().ifPresent(args -> state.rpcRequestVote(decoded.uuid, args));
                 break;
             case RESULT:
                 decoded.decodeResult().ifPresent(state::rpcReceiveResult);
+                break;
+            case NEW_ENTRY:
+                state.rpcReceiveEntry(decoded.payload);
                 break;
         }
     }

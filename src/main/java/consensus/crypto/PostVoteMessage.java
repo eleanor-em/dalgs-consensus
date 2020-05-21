@@ -5,8 +5,8 @@ public class PostVoteMessage extends CryptoMessage {
     public final Ciphertext vote;
     public final ProofKnowDlog proofPlaintextKnow;
 
-    public PostVoteMessage(CryptoContext ctx, KeyShare keyShare, int candidate) {
-        super(KIND);
+    public PostVoteMessage(String sessionId, CryptoContext ctx, KeyShare keyShare, int candidate) {
+        super(KIND, sessionId);
 
         var r = ctx.nextPower();
         this.vote = keyShare.encrypt(candidate, r);
@@ -16,8 +16,8 @@ public class PostVoteMessage extends CryptoMessage {
         this.append("proof", proofPlaintextKnow.asJson());
     }
 
-    protected PostVoteMessage(Ciphertext vote, ProofKnowDlog proofPlaintextKnow) {
-        super(KIND);
+    protected PostVoteMessage(String sessionId, Ciphertext vote, ProofKnowDlog proofPlaintextKnow) {
+        super(KIND, sessionId);
         this.vote = vote;
         this.proofPlaintextKnow = proofPlaintextKnow;
     }

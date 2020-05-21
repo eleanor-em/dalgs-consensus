@@ -33,7 +33,7 @@ public class CandidateRaftState extends AbstractRaftState {
 
         // Request votes from others
         var args = new RequestVoteArgs(this.currentTerm, this.id, this.lastLogIndex, this.lastLogTerm);
-        this.sendMessageToAll(new RpcMessage(args).encoded());
+        this.sendMessageToAll(new RpcMessage(args), this::onReceiveResult);
     }
 
     @Override
@@ -65,8 +65,7 @@ public class CandidateRaftState extends AbstractRaftState {
         }
     }
 
-    @Override
-    protected void onReceiveResult(RpcResult result) {
+    private void onReceiveResult(RpcResult result) {
         if (result.currentTerm > currentTerm) {
             shouldBecomeFollower = true;
         } else if (result.success) {
