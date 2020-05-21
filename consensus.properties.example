@@ -9,3 +9,5 @@ leaderLag=165
 initialBalance=5
 initialPowDifficulty=1
 mineRate=10000
+clientMinDelay=1000
+clientMaxDelay=10000
