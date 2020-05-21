@@ -85,7 +85,15 @@ public abstract class AbstractRaftState {
                     } else {
                         for (var newEntry : args.entries) {
                             if (ledger.containsKey(newEntry.index) && ledger.get(newEntry.index).term != newEntry.term) {
-                                log.warn(id + ": incorrect ledger, truncating");
+                                log.warn(id + ": incorrect ledger: index " + newEntry.index + " has term "
+                                        + newEntry.term + " != " + ledger.get(newEntry.index).term
+                                        + ", truncating");
+                                lastLogIndex = newEntry.index - 1;
+                                if (lastLogIndex > 0) {
+                                    lastLogTerm = ledger.get(lastLogIndex).term;
+                                } else {
+                                    lastLogTerm = 0;
+                                }
                                 // Truncate the log
                                 for (var key : ledger.keySet()) {
                                     if (key >= newEntry.index) {
@@ -117,14 +125,16 @@ public abstract class AbstractRaftState {
         int lastNewTerm = -1;
 
         for (var newEntry : args.entries) {
-            if (newEntry.index > lastNewIndex) {
-                lastNewIndex = newEntry.index;
+            if (newEntry.index > lastLogIndex) {
+                if (newEntry.index > lastNewIndex) {
+                    lastNewIndex = newEntry.index;
+                }
+                if (newEntry.term > lastNewTerm) {
+                    lastNewTerm = newEntry.term;
+                }
+                log.debug(id + ": appending entry #" + newEntry.index + ": " + newEntry.message.msg.data);
+                ledger.put(newEntry.index, newEntry);
             }
-            if (newEntry.term > lastNewTerm) {
-                lastNewTerm = newEntry.term;
-            }
-            log.debug(id + ": appending entry #" + newEntry.index + ": " + newEntry.message.msg.data);
-            ledger.put(newEntry.index, newEntry);
         }
 
         if (lastNewIndex > this.lastLogIndex) {
@@ -193,6 +203,8 @@ public abstract class AbstractRaftState {
         state.commitIndex = commitIndex;
         state.lastApplied = lastApplied;
         state.ledger = ledger;
+        state.lastLogIndex = lastLogIndex;
+        state.lastLogTerm = lastLogTerm;
     }
 
     protected AbstractRaftState asFollower() {

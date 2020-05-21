@@ -47,7 +47,6 @@ public class LeaderRaftState extends AbstractRaftState {
                 var dest = followerId;
                 var newEntries = new ArrayList<LedgerEntry>();
                 for (int i = prevLogIndex + 1; i <= lastLogIndex; ++i) {
-                    log.debug(id + ": sending entry " + i);
                     newEntries.add(ledger.get(i));
                 }
 
@@ -95,7 +94,7 @@ public class LeaderRaftState extends AbstractRaftState {
 
             try {
                 // sleep random amount of time to simulate unreliable connection
-                Thread.sleep((int) (Math.random() * 10 * Timer.TIME_SCALE));
+                Thread.sleep((int) (Math.random() * 165 * Timer.TIME_SCALE));
             } catch (InterruptedException ignored) {}
 
             return this;
@@ -127,8 +126,9 @@ public class LeaderRaftState extends AbstractRaftState {
         var maybeMessage = IncomingMessage.tryFrom(entry);
         if (maybeMessage.isPresent()) {
             var message = maybeMessage.get();
-            log.debug(id + ": leader received entry from " + message.src + ": " + message.msg.data);
             ++this.lastLogIndex;
+            log.debug(id + ": leader received entry #" + this.lastLogIndex
+                    + " from " + message.src + ": " + message.msg.data);
             this.ledger.put(this.lastLogIndex, new LedgerEntry(this.lastLogIndex, this.currentTerm, maybeMessage.get()));
         } else {
             log.warn(id + ": leader received malformed entry: " + entry);
