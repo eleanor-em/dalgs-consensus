@@ -287,5 +287,4 @@ public abstract class AbstractRaftState {
         this.onReturn.put(message.uuid, new CallbackWrapper(serverCount - 1, callback));
         actor.sendMessageToAll(message.encoded());
     }
-
 }

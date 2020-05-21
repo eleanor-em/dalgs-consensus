@@ -17,6 +17,7 @@ public abstract class CryptoMessage {
     protected CryptoMessage(CryptoMessageKind kind, String sessionId) {
         doc = new JSONObject();
         doc.put("kind", kind.name());
+        doc.put("session_id", sessionId);
 
         this.kind = kind;
         this.sessionId = sessionId;
