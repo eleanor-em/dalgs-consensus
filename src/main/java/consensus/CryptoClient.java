@@ -121,7 +121,7 @@ public class CryptoClient implements IConsensusClient {
         CryptoDriver.saveSessionData(sessionData);
 
         var voteMsg = sessionData.voteMsg.get();
-        log.info("vote: " + voteMsg.encode().data);
+        log.info("vote: " + CryptoUtils.hash(voteMsg.encode().data));
         if (!sendVote(voteMsg)) {
             return;
         }
@@ -137,7 +137,10 @@ public class CryptoClient implements IConsensusClient {
 
     private boolean sendVote(PostVoteMessage voteMsg) {
         // Send vote
-        queue.offer(voteMsg.encode());
+        try {
+            queue.put(voteMsg.encode());
+        } catch (InterruptedException ignored) {
+        }
         log.info("vote posted");
 
         // Wait for other votes
@@ -160,7 +163,10 @@ public class CryptoClient implements IConsensusClient {
     private Optional<KeyShare> generateKey(LocalKeygenShare share, CryptoContext ctx) {
         // Publish commitment and wait for others
         var commitMessage = new KeygenCommitMessage(sessionData.sessionId, share);
-        queue.offer(commitMessage.encode());
+        try {
+            queue.put(commitMessage.encode());
+        } catch (InterruptedException ignored) {
+        }
         log.info("key generation commit posted");
 
         // Wait for other commitments
@@ -171,7 +177,10 @@ public class CryptoClient implements IConsensusClient {
 
         // Publish opening and wait for others
         var openingMessage = new KeygenOpeningMessage(sessionData.sessionId, share);
-        queue.offer(openingMessage.encode());
+        try {
+            queue.put(openingMessage.encode());
+        } catch (InterruptedException ignored) {
+        }
         log.info("key generation opening posted");
         while (keygenOpenings.size() < peerCount) {
             Thread.yield();
@@ -207,7 +216,10 @@ public class CryptoClient implements IConsensusClient {
             // Index ciphertext by ID
             ciphertexts.put(shareMessage.id, postVoteMsg.vote);
             log.info("decrypt share for " + shareMessage.id + " posted");
-            queue.offer(shareMessage.encode());
+            try {
+                queue.put(shareMessage.encode());
+            } catch (InterruptedException ignored) {
+            }
             this.unsafeSleep();
         }
 
