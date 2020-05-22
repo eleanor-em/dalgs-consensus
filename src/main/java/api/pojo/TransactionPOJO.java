@@ -1,6 +1,6 @@
-package api.dto;
+package api.pojo;
 
-public class TransactionDTO {
+public class TransactionPOJO {
     private String recipient;
     private float amount;
 

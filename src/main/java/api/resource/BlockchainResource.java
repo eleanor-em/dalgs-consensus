@@ -1,10 +1,8 @@
 package api.resource;
 
-import api.dto.TransactionDTO;
-import blockchain.block.Block;
+import api.pojo.TransactionPOJO;
 import blockchain.block.Blockchain;
 import blockchain.miner.Miner;
-import blockchain.transaction.Transaction;
 import blockchain.transaction.TransactionPool;
 import blockchain.wallet.Wallet;
 import com.codahale.metrics.annotation.Timed;
@@ -13,7 +11,6 @@ import consensus.util.StringUtils;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.List;
 
 @Path("")
 public class BlockchainResource {
@@ -64,9 +61,9 @@ public class BlockchainResource {
     @Timed
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response postTransaction(TransactionDTO transactionDTO) {
+    public Response postTransaction(TransactionPOJO transactionPOJO) {
         try {
-            wallet.createTransaction(transactionDTO.getRecipient(), transactionDTO.getAmount());
+            wallet.createTransaction(transactionPOJO.getRecipient(), transactionPOJO.getAmount());
             return Response.ok(transactionPool.getTransactionList(), MediaType.APPLICATION_JSON).build();
         } catch (Exception e) {
             return Response.status(Response.Status.BAD_REQUEST).build();
