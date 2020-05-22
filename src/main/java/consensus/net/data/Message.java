@@ -9,7 +9,7 @@ public class Message {
         this.data = data;
     }
 
-    public static Optional<Message> tryFrom(String message) {
+    public static Optional<Message> from(String message) {
         return Optional.of(new Message(message));
     }
 

@@ -12,12 +12,15 @@ public abstract class CryptoMessage {
     private static final Logger log = LogManager.getLogger(CryptoMessage.class);
     private final JSONObject doc;
     public final CryptoMessageKind kind;
+    public final String sessionId;
 
-    protected CryptoMessage(CryptoMessageKind kind) {
+    protected CryptoMessage(CryptoMessageKind kind, String sessionId) {
         doc = new JSONObject();
         doc.put("kind", kind.name());
+        doc.put("session_id", sessionId);
 
         this.kind = kind;
+        this.sessionId = sessionId;
     }
 
     protected void append(String key, String str) {
@@ -35,6 +38,10 @@ public abstract class CryptoMessage {
             if (maybeKind.isEmpty()) {
                 return Optional.empty();
             }
+            var sessionId = doc.getString("session_id");
+            if (sessionId == null) {
+                return Optional.empty();
+            }
 
             switch (maybeKind.get()) {
                 case KEYGEN_COMMIT:
@@ -46,7 +53,7 @@ public abstract class CryptoMessage {
                     if (commitment != null && g != null) {
                         var decodedCommit = CryptoUtils.b64Decode(commitment);
                         var decodedGenerator = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(g));
-                        return Optional.of(new KeygenCommitMessage(decodedCommit, decodedGenerator));
+                        return Optional.of(new KeygenCommitMessage(sessionId, decodedCommit, decodedGenerator));
                     } else {
                         return Optional.empty();
                     }
@@ -61,7 +68,7 @@ public abstract class CryptoMessage {
 
                     if (y_i != null && maybeProofKnow.isPresent()) {
                         var y_iActual = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(y_i));
-                        return Optional.of(new KeygenOpeningMessage(y_iActual, maybeProofKnow.get()));
+                        return Optional.of(new KeygenOpeningMessage(sessionId, y_iActual, maybeProofKnow.get()));
                     } else {
                         return Optional.empty();
                     }
@@ -70,7 +77,7 @@ public abstract class CryptoMessage {
                     var maybeVote = Ciphertext.tryFrom(ctx, doc.getJSONObject("vote"));
                     var maybeProof = ProofKnowDlog.tryFrom(ctx, doc.getJSONObject("proof"));
                     if (maybeVote.isPresent() && maybeProof.isPresent()) {
-                        return Optional.of(new PostVoteMessage(maybeVote.get(), maybeProof.get()));
+                        return Optional.of(new PostVoteMessage(sessionId, maybeVote.get(), maybeProof.get()));
                     } else {
                         return Optional.empty();
                     }
@@ -88,7 +95,7 @@ public abstract class CryptoMessage {
                     if (a_i != null && g != null && id != null && maybeProofEq.isPresent()) {
                         var a_iDecoded = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(a_i));
                         var gDecoded = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(g));
-                        return Optional.of(new DecryptShareMessage(id, a_iDecoded, maybeProofEq.get(), gDecoded));
+                        return Optional.of(new DecryptShareMessage(sessionId, id, a_iDecoded, maybeProofEq.get(), gDecoded));
                     } else {
                         return Optional.empty();
                     }

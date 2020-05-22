@@ -5,8 +5,8 @@ public class KeygenOpeningMessage extends CryptoMessage {
     public final GroupElement y_i;
     public final ProofKnowDlog proof;
 
-    public KeygenOpeningMessage(LocalKeygenShare share) {
-        super(KIND);
+    public KeygenOpeningMessage(String sessionId, LocalKeygenShare share) {
+        super(KIND, sessionId);
         this.y_i = share.y_i;
         this.proof = share.proof;
         var y_iEncoded = CryptoUtils.b64Encode(share.y_i.asBytes());
@@ -15,8 +15,8 @@ public class KeygenOpeningMessage extends CryptoMessage {
         this.append("proof", proofEncoded);
     }
 
-    protected KeygenOpeningMessage(GroupElement y_i, ProofKnowDlog proof) {
-        super(KIND);
+    protected KeygenOpeningMessage(String sessionId, GroupElement y_i, ProofKnowDlog proof) {
+        super(KIND, sessionId);
         this.y_i = y_i;
         this.proof = proof;
     }

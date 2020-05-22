@@ -21,15 +21,11 @@ public class IncomingMessage {
         }
 
         var split = str.split(DELIM);
-        if (split.length < 2) {
-            return Optional.empty();
-        }
 
         var maybeId = Validation.tryParseUInt(split[0]);
         return maybeId.flatMap(id -> {
             var data = String.join(DELIM, Arrays.copyOfRange(split, 1, split.length));
-            var message = Message.tryFrom(data);
-            return message.map(m -> new IncomingMessage(m, id));
+            return Optional.of(new IncomingMessage(new Message(data), id));
         });
     }
 

@@ -9,8 +9,8 @@ public class DecryptShareMessage extends CryptoMessage {
     public final ProofEqDlogs proof;
     public final GroupElement g;
 
-    public DecryptShareMessage(CryptoContext ctx, KeyShare keyShare, Ciphertext ct) {
-        super(KIND);
+    public DecryptShareMessage(String sessionId, CryptoContext ctx, KeyShare keyShare, Ciphertext ct) {
+        super(KIND, sessionId);
 
         this.id = CryptoUtils.b64Encode(CryptoUtils.hash(ct));
         this.a_i = ct.a.pow(keyShare.x_i);
@@ -25,8 +25,8 @@ public class DecryptShareMessage extends CryptoMessage {
         this.append("g", CryptoUtils.b64Encode(g.asBytes()));
     }
 
-    protected DecryptShareMessage(String id, GroupElement a_i, ProofEqDlogs proof, GroupElement g) {
-        super(KIND);
+    protected DecryptShareMessage(String sessionId, String id, GroupElement a_i, ProofEqDlogs proof, GroupElement g) {
+        super(KIND, sessionId);
         this.id = id;
         this.a_i = a_i;
         this.proof = proof;

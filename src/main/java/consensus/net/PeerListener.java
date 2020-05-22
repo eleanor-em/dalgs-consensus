@@ -35,8 +35,8 @@ public class PeerListener {
         var hostPort = allPeers.get(id);
 
         // Start worker threads
-        exec.execute(() -> listen(hostPort));
         connectService = new PeerConnectService(this, allPeers);
+        exec.execute(() -> listen(hostPort));
         exec.execute(this::sendMonitor);
         actor.run();
     }

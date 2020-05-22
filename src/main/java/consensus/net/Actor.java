@@ -7,7 +7,6 @@ import consensus.net.service.PeerConnectService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Optional;
 import java.util.concurrent.*;
 
 /**
@@ -16,12 +15,10 @@ import java.util.concurrent.*;
  */
 public abstract class Actor implements Runnable {
     private static final Logger log = LogManager.getLogger(PeerConnectService.class);
-    private final BlockingQueue<IncomingMessage> receiver = new LinkedBlockingQueue<>();
     private final BlockingQueue<OutgoingMessage> toSend = new LinkedBlockingQueue<>();
 
     final void receive(IncomingMessage message) {
         onReceive(message);
-        receiver.add(message);
     }
 
     final OutgoingMessage take() throws InterruptedException {
@@ -51,43 +48,14 @@ public abstract class Actor implements Runnable {
     /**
      * Sends a message to a specific other peer.
      */
-    protected final void sendMessage(Message message, int dest) {
+    public final void sendMessage(Message message, int dest) {
         toSend.add(new OutgoingMessage(message, dest));
     }
 
     /**
      * Sends a message to all other peers.
      */
-    protected final void sendMessageToAll(Message message) {
+    public final void sendMessageToAll(Message message) {
         toSend.add(new OutgoingMessage(message));
-    }
-
-    /**
-     * Takes a message from the receiver, blocking until one is available.
-     */
-    protected final IncomingMessage takeFromReceiver() throws InterruptedException {
-        return receiver.take();
-    }
-
-    /**
-     * Takes a message from the receiver if one is available, otherwise returns Empty.
-     */
-    protected final Optional<IncomingMessage> pollReceiver() {
-        return Optional.ofNullable(receiver.poll());
-    }
-
-    /**
-     * Waits up to timeoutMs milliseconds for a message to be available from the receiver.
-     * Returns Empty if no message arrives in that time.
-     */
-    protected final Optional<IncomingMessage> pollTimeout(int timeoutMs) throws InterruptedException {
-        return Optional.ofNullable(receiver.poll(timeoutMs, TimeUnit.MILLISECONDS));
-    }
-
-    /**
-     * Returns a message from the receiver if one is available, but leaves it in the receiver.
-     */
-    protected final Optional<IncomingMessage> peekReceiver() {
-        return Optional.ofNullable(receiver.peek());
     }
 }

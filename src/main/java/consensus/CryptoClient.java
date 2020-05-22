@@ -27,6 +27,8 @@ public class CryptoClient implements IConsensusClient, Runnable {
     private final int peerCount;
     private final Random rng = new Random();
 
+    private final String sessionId;
+
     @Override
     public LinkedBlockingQueue<Message> getBroadcastQueue() {
         return queue;
@@ -79,13 +81,14 @@ public class CryptoClient implements IConsensusClient, Runnable {
             log.fatal("Must have at least one peer. Check \"hosts\" in the configuration file.");
             System.exit(2);
         }
-        var cryptoClient = new CryptoClient(peerCount);
+        var cryptoClient = new CryptoClient("Test", peerCount);
         IpcClient.open(ipcServer.get(), cryptoClient);
         cryptoClient.run();
         System.exit(0);
     }
 
-    public CryptoClient(int peerCount) {
+    public CryptoClient(String sessionId, int peerCount) {
+        this.sessionId = sessionId;
         this.peerCount = peerCount;
 
         var p = ConfigManager.getString("p").orElseGet(() -> {
@@ -135,7 +138,7 @@ public class CryptoClient implements IConsensusClient, Runnable {
 
     private boolean sendVote(KeyShare keyShare, int vote) {
         // Send vote
-        var msg = new PostVoteMessage(ctx, keyShare, vote);
+        var msg = new PostVoteMessage(sessionId, ctx, keyShare, vote);
         queue.offer(msg.encode());
         log.info("vote posted");
 
@@ -159,7 +162,7 @@ public class CryptoClient implements IConsensusClient, Runnable {
     private Optional<KeyShare> generateKey(CryptoContext ctx) {
         // Publish commitment and wait for others
         var share = new LocalKeygenShare(ctx);
-        var commitMessage = new KeygenCommitMessage(share);
+        var commitMessage = new KeygenCommitMessage(sessionId, share);
         queue.offer(commitMessage.encode());
         log.info("key generation commit posted");
 
@@ -170,7 +173,7 @@ public class CryptoClient implements IConsensusClient, Runnable {
         this.unsafeSleep();
 
         // Publish opening and wait for others
-        var openingMessage = new KeygenOpeningMessage(share);
+        var openingMessage = new KeygenOpeningMessage(sessionId, share);
         queue.offer(openingMessage.encode());
         log.info("key generation opening posted");
         while (keygenOpenings.size() < peerCount) {
@@ -203,7 +206,7 @@ public class CryptoClient implements IConsensusClient, Runnable {
 
         // Publish shares for each vote
         for (var postVoteMsg : postVotes.values()) {
-            var shareMessage = new DecryptShareMessage(ctx, keyShare, postVoteMsg.vote);
+            var shareMessage = new DecryptShareMessage(sessionId, ctx, keyShare, postVoteMsg.vote);
             // Index ciphertext by ID
             ciphertexts.put(shareMessage.id, postVoteMsg.vote);
             log.info("decrypt share for " + shareMessage.id + " posted");

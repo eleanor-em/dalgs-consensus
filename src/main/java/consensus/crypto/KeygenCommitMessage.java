@@ -7,8 +7,8 @@ public class KeygenCommitMessage extends CryptoMessage {
     public final byte[] commitment;
     public final GroupElement g;
 
-    public KeygenCommitMessage(LocalKeygenShare share) {
-        super(KIND);
+    public KeygenCommitMessage(String sessionId, LocalKeygenShare share) {
+        super(KIND, sessionId);
         this.commitment = share.commitment;
         this.g = share.g;
 
@@ -17,8 +17,8 @@ public class KeygenCommitMessage extends CryptoMessage {
         this.append("g", CryptoUtils.b64Encode(g.asBytes()));;
     }
 
-    protected KeygenCommitMessage(byte[] commitment, GroupElement g) {
-        super(KIND);
+    protected KeygenCommitMessage(String sessionId, byte[] commitment, GroupElement g) {
+        super(KIND, sessionId);
         this.commitment = commitment;
         this.g = g;
     }
