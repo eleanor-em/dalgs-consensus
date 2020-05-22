@@ -64,12 +64,11 @@ public class LeaderRaftState extends AbstractRaftState {
                         newEntries, this.commitIndex);
                 this.sendMessage(new RpcMessage(args), dest, result -> {
                     if (result.success) {
-                        log.debug(id + ": AppendEntries succeeded for " + dest);
                         matchIndex.set(dest, lastLogIndex);
                     } else {
                         // decrement index and try again
                         log.debug(id + ": AppendEntries failed for " + dest);
-                        nextIndex.set(dest, prevLogIndex);
+                        nextIndex.set(dest, Math.min(prevLogIndex, result.lastLogIndex));
                     }
                 });
 
@@ -128,8 +127,7 @@ public class LeaderRaftState extends AbstractRaftState {
             synchronized (lock) {
                 var message = maybeMessage.get();
                 ++this.lastLogIndex;
-                log.debug(id + ": leader received entry #" + this.lastLogIndex
-                        + " from " + message.src + ": " + message.msg.data);
+                log.debug(id + ": leader received entry #" + this.lastLogIndex + " from " + message.src);
 
                 this.nextIndex.set(id, lastLogIndex + 1);
                 this.matchIndex.set(id, lastLogIndex);

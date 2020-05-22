@@ -25,7 +25,6 @@ public class RaftActor extends Actor {
         while (!Thread.interrupted()) {
             try {
                 var message = queue.take();
-                log.debug(id + ": received entry: " + message);
                 var wrapped = new IncomingMessage(message, id);
                 state.rpcReceiveEntry(wrapped.encoded());
             } catch (InterruptedException ignored) {}

@@ -1,7 +1,5 @@
 package consensus;
 import consensus.crypto.*;
-import consensus.ipc.IpcClient;
-import consensus.net.data.HostPort;
 import consensus.net.data.IncomingMessage;
 import consensus.net.data.Message;
 import consensus.util.ConfigManager;
@@ -13,8 +11,17 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
-// TODO: Some kind of sessioning, so repeated runs of the protocol can be performed on the same ledger
-public class CryptoClient implements IConsensusClient, Runnable {
+class CryptoSessionData {
+    public final String sessionId;
+    public Optional<LocalKeygenShare> keyShare = Optional.empty();
+    public Optional<PostVoteMessage> voteMsg = Optional.empty();
+
+    CryptoSessionData(String sessionId) {
+        this.sessionId = sessionId;
+    }
+}
+
+public class CryptoClient implements IConsensusClient {
     private static final Logger log = LogManager.getLogger(CryptoClient.class);
 
     private final LinkedBlockingQueue<Message> queue = new LinkedBlockingQueue<>();
@@ -23,11 +30,14 @@ public class CryptoClient implements IConsensusClient, Runnable {
     private final Map<Integer, PostVoteMessage> postVotes = new ConcurrentHashMap<>();
     private final Map<String, Map<Integer, DecryptShareMessage>> decryptShares = new ConcurrentHashMap<>();
 
+    private final int clientMinDelay = ConfigManager.getInt("clientMinDelay").orElse(1000);
+    private final int clientMaxDelay = ConfigManager.getInt("clientMaxDelay").orElse(5000);
+
     private final CryptoContext ctx;
     private final int peerCount;
     private final Random rng = new Random();
 
-    private final String sessionId;
+    private final CryptoSessionData sessionData;
 
     @Override
     public LinkedBlockingQueue<Message> getBroadcastQueue() {
@@ -39,6 +49,10 @@ public class CryptoClient implements IConsensusClient, Runnable {
         var decoded = CryptoMessage.tryFrom(this.ctx, message.msg.data);
         if (decoded.isPresent()) {
             var msg = decoded.get();
+            if (!msg.sessionId.equals(sessionData.sessionId)) {
+                return;
+            }
+
             switch (msg.kind) {
                 case KEYGEN_COMMIT:
                     keygenCommits.put(message.src, (KeygenCommitMessage) msg);
@@ -63,32 +77,8 @@ public class CryptoClient implements IConsensusClient, Runnable {
         decryptShares.get(msg.id).put(src, msg);
     }
 
-    public static void main(String[] args) {
-        ConfigManager.loadProperties();
-        var ipcServerString = ConfigManager.getString("ipcServer");
-        if (ipcServerString.isEmpty()) {
-            System.exit(2);
-        }
-
-        var ipcServer = HostPort.tryFrom(ipcServerString.get());
-        if (ipcServer.isEmpty()) {
-            log.fatal("could not interpret address: " + ipcServerString.get());
-            System.exit(2);
-        }
-
-        var peerCount = ConfigManager.getString("hosts").orElse("").split(",").length;
-        if (peerCount == 0) {
-            log.fatal("Must have at least one peer. Check \"hosts\" in the configuration file.");
-            System.exit(2);
-        }
-        var cryptoClient = new CryptoClient("Test", peerCount);
-        IpcClient.open(ipcServer.get(), cryptoClient);
-        cryptoClient.run();
-        System.exit(0);
-    }
-
-    public CryptoClient(String sessionId, int peerCount) {
-        this.sessionId = sessionId;
+    public CryptoClient(CryptoSessionData sessionData, int peerCount) {
+        this.sessionData = sessionData;
         this.peerCount = peerCount;
 
         var p = ConfigManager.getString("p").orElseGet(() -> {
@@ -99,31 +89,40 @@ public class CryptoClient implements IConsensusClient, Runnable {
     }
 
     private void unsafeSleep() {
-        try {
-            Thread.sleep(rng.nextInt(10000) + 1000);
-        } catch (InterruptedException ignored) {}
+        var delta = clientMaxDelay - clientMinDelay;
+        if (delta > 0) {
+            try {
+                Thread.sleep(rng.nextInt(delta) + clientMinDelay);
+            } catch (InterruptedException ignored) {
+            }
+        }
     }
 
-    @Override
     public void run() {
-        try {
-            Thread.sleep(10000);
-        } catch (InterruptedException ignored) {}
-        this.unsafeSleep();
-        log.info("online");
-
         // Generate key share
-        var maybeKeyShare = generateKey(ctx);
+        if (sessionData.keyShare.isEmpty()) {
+            sessionData.keyShare = Optional.of(new LocalKeygenShare(ctx));
+        }
+        CryptoDriver.saveSessionData(sessionData);
+
+        var maybeKeyShare = generateKey(sessionData.keyShare.get(), ctx);
         if (maybeKeyShare.isEmpty()) {
             return;
         }
 
         var keyShare = maybeKeyShare.get();
-        log.info("" + keyShare);
+        log.info("key share: " + keyShare);
 
         // Send vote
-        int vote = (int) (System.currentTimeMillis() % 1000);
-        if (!sendVote(keyShare, vote)) {
+        if (sessionData.voteMsg.isEmpty()) {
+            int vote = (int) (System.currentTimeMillis() % 1000);
+            sessionData.voteMsg = Optional.of(new PostVoteMessage(sessionData.sessionId, ctx, keyShare, vote));
+        }
+        CryptoDriver.saveSessionData(sessionData);
+
+        var voteMsg = sessionData.voteMsg.get();
+        log.info("vote: " + CryptoUtils.hash(voteMsg.encode().data));
+        if (!sendVote(voteMsg)) {
             return;
         }
 
@@ -136,10 +135,12 @@ public class CryptoClient implements IConsensusClient, Runnable {
         log.info("result: " + maybeVotes.get());
     }
 
-    private boolean sendVote(KeyShare keyShare, int vote) {
+    private boolean sendVote(PostVoteMessage voteMsg) {
         // Send vote
-        var msg = new PostVoteMessage(sessionId, ctx, keyShare, vote);
-        queue.offer(msg.encode());
+        try {
+            queue.put(voteMsg.encode());
+        } catch (InterruptedException ignored) {
+        }
         log.info("vote posted");
 
         // Wait for other votes
@@ -159,11 +160,13 @@ public class CryptoClient implements IConsensusClient, Runnable {
         return true;
     }
 
-    private Optional<KeyShare> generateKey(CryptoContext ctx) {
+    private Optional<KeyShare> generateKey(LocalKeygenShare share, CryptoContext ctx) {
         // Publish commitment and wait for others
-        var share = new LocalKeygenShare(ctx);
-        var commitMessage = new KeygenCommitMessage(sessionId, share);
-        queue.offer(commitMessage.encode());
+        var commitMessage = new KeygenCommitMessage(sessionData.sessionId, share);
+        try {
+            queue.put(commitMessage.encode());
+        } catch (InterruptedException ignored) {
+        }
         log.info("key generation commit posted");
 
         // Wait for other commitments
@@ -173,8 +176,11 @@ public class CryptoClient implements IConsensusClient, Runnable {
         this.unsafeSleep();
 
         // Publish opening and wait for others
-        var openingMessage = new KeygenOpeningMessage(sessionId, share);
-        queue.offer(openingMessage.encode());
+        var openingMessage = new KeygenOpeningMessage(sessionData.sessionId, share);
+        try {
+            queue.put(openingMessage.encode());
+        } catch (InterruptedException ignored) {
+        }
         log.info("key generation opening posted");
         while (keygenOpenings.size() < peerCount) {
             Thread.yield();
@@ -206,11 +212,14 @@ public class CryptoClient implements IConsensusClient, Runnable {
 
         // Publish shares for each vote
         for (var postVoteMsg : postVotes.values()) {
-            var shareMessage = new DecryptShareMessage(sessionId, ctx, keyShare, postVoteMsg.vote);
+            var shareMessage = new DecryptShareMessage(sessionData.sessionId, ctx, keyShare, postVoteMsg.vote);
             // Index ciphertext by ID
             ciphertexts.put(shareMessage.id, postVoteMsg.vote);
             log.info("decrypt share for " + shareMessage.id + " posted");
-            queue.offer(shareMessage.encode());
+            try {
+                queue.put(shareMessage.encode());
+            } catch (InterruptedException ignored) {
+            }
             this.unsafeSleep();
         }
 

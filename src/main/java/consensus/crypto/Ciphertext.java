@@ -24,10 +24,10 @@ public class Ciphertext {
             return Optional.empty();
         }
 
-        var aStr = doc.getString("a");
-        var bStr = doc.getString("b");
+        var aStr = doc.optString("a");
+        var bStr = doc.optString("b");
 
-        if (aStr != null && bStr != null) {
+        if (aStr.length() > 0 && bStr.length() > 0) {
             var a = CryptoUtils.b64toBigInt(aStr);
             var b = CryptoUtils.b64toBigInt(bStr);
             return Optional.of(new Ciphertext(new GroupElement(ctx.p, a),

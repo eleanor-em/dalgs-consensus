@@ -64,15 +64,15 @@ class ProofEqDlogs {
             return Optional.empty();
         }
 
-        var aStr = obj.getString("a");
-        var bStr = obj.getString("b");
-        var dStr = obj.getString("d");
-        var eStr = obj.getString("e");
-        var gStr = obj.getString("g");
-        var hStr = obj.getString("h");
-        var rStr = obj.getString("r");
+        var aStr = obj.optString("a");
+        var bStr = obj.optString("b");
+        var dStr = obj.optString("d");
+        var eStr = obj.optString("e");
+        var gStr = obj.optString("g");
+        var hStr = obj.optString("h");
+        var rStr = obj.optString("r");
 
-        if (aStr != null && bStr != null && dStr != null && eStr != null && gStr != null && hStr != null) {
+        if (aStr.length() > 0 && bStr.length() > 0 && dStr.length() > 0 && eStr.length() > 0 && gStr.length() > 0 && hStr.length() > 0) {
             var a = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(aStr));
             var b = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(bStr));
             var d = new GroupElement(ctx.p, CryptoUtils.b64toBigInt(dStr));
