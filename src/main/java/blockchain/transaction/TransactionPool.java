@@ -12,6 +12,10 @@ public class TransactionPool {
         transactionList = new ArrayList<>();
     }
 
+    public List<Transaction> getTransactionList() {
+        return transactionList;
+    }
+
     public void updateOrAddTransaction(Transaction newTransaction) {
         var existing = this.transactionList.stream()
                 .filter(t -> t.getId().equals(newTransaction.getId()))

@@ -74,7 +74,7 @@ public class Wallet {
             List<TransactionOutput> transactionOutputs = transaction.getTransactionOutputs();
             String data = CryptoUtils.hash(StringUtils.toJson(transactionOutputs));
             byte[] signature = sign(data);
-            TransactionInput transactionInput = new TransactionInput(timestamp, getAddress(), balance, signature);
+            TransactionInput transactionInput = new TransactionInput(timestamp, getAddress(), balance, StringUtils.byteArrayToHex(signature));
             transaction.setTransactionInput(transactionInput);
             return true;
         } catch (Exception e) {
