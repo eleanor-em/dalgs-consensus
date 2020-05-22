@@ -27,12 +27,10 @@ public class StringUtils {
     }
 
     public static String toJson(Object object) {
-        Gson gson = new Gson();
-        return gson.toJson(object);
+        return new Gson().toJson(object);
     }
 
     public static <T> T fromJson(String json, Type typeOfT) {
-        Gson gson = new Gson();
         return new Gson().fromJson(json, typeOfT);
     }
 }

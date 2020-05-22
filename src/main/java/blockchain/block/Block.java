@@ -3,6 +3,7 @@ package blockchain.block;
 import blockchain.transaction.Transaction;
 import consensus.crypto.CryptoUtils;
 import consensus.util.ConfigManager;
+import consensus.util.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -57,7 +58,7 @@ public class Block {
         } while (!hashValue.substring(0, difficulty).equals("0".repeat(difficulty)));
         log.debug(String.format("Solved the POW problem (difficulty=%d) with %d attempt(s)", difficulty, nonce));
 
-        String blockHash = CryptoUtils.hash(timestamp + lastHash);
+        String blockHash = CryptoUtils.hash(timestamp + lastHash + StringUtils.toJson(transactions));
 
         return new Block(timestamp, lastHash, blockHash, transactions);
     }
@@ -69,7 +70,7 @@ public class Block {
     }
 
     public static String blockHash(Block block) {
-        String blockContent = block.getTimestamp() + block.getLastHash();
+        String blockContent = block.getTimestamp() + block.getLastHash() + StringUtils.toJson(block.getTransactionList());
         return CryptoUtils.hash(blockContent);
     }
 
