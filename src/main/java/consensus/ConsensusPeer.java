@@ -1,8 +1,11 @@
 package consensus;
 
+import api.application.WSApplication;
 import blockchain.block.Blockchain;
+import blockchain.miner.Miner;
 import blockchain.p2p.BlockchainActor;
 import blockchain.transaction.TransactionPool;
+import blockchain.wallet.Wallet;
 import consensus.ipc.IpcServer;
 import consensus.net.PeerListener;
 import consensus.net.data.HostPort;
@@ -55,6 +58,7 @@ public class ConsensusPeer {
 
         var actors = new ArrayList<BlockchainActor>();
 
+        WSApplication wsApplication;
         // Start a peer for each id
         for (int i = 0; i < hosts.size(); ++i) {
             final int id = i;
@@ -62,10 +66,21 @@ public class ConsensusPeer {
             var client = new IpcServer(id);
             var blockchain = new Blockchain();
             var transactionPool = new TransactionPool();
-            var blockchainActor = new BlockchainActor(id, client, blockchain, transactionPool);
+            var miner = new Miner(blockchain, transactionPool);
+            var wallet = new Wallet(blockchain, transactionPool);
+            var blockchainActor = new BlockchainActor(id, client, blockchain, transactionPool, miner, wallet);
             actors.add(blockchainActor);
             new Thread(() -> new PeerListener(id, thisPeerHosts, blockchainActor)).start();
             // new Thread(() -> new PeerListener(id, thisPeerHosts, new RaftActor(id, hosts.size(), client))).start();
+
+            if (i == 0) {
+                try {
+                    wsApplication = new WSApplication(blockchain, transactionPool, miner, wallet);
+                    wsApplication.run("server");
+                } catch (Exception e) {
+                    log.error(e.getMessage());
+                }
+            }
         }
 
         do {
@@ -83,6 +98,7 @@ public class ConsensusPeer {
                 Thread.sleep(2000 + (int) (3000 * Math.random()));
             } catch (InterruptedException ignored) {}
         } while (!Thread.interrupted());
+
     }
 
     private static void runRelease() {

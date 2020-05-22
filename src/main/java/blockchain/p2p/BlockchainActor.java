@@ -30,14 +30,14 @@ public class BlockchainActor extends Actor {
     private final Miner miner;
     private final Wallet wallet;
 
-    public BlockchainActor(int id, IConsensusClient client, Blockchain blockchain, TransactionPool transactionPool) {
+    public BlockchainActor(int id, IConsensusClient client, Blockchain blockchain, TransactionPool transactionPool, Miner miner, Wallet wallet) {
         this.id = id;
         this.client = client;
 
         this.blockchain = blockchain;
         this.transactionPool = transactionPool;
-        this.miner = new Miner(blockchain, transactionPool);
-        this.wallet = new Wallet(blockchain, transactionPool);
+        this.miner = miner;
+        this.wallet = wallet;
 
         new Thread(this::mineThread).start();
     }
@@ -62,7 +62,8 @@ public class BlockchainActor extends Actor {
                     requestAllToReplicateBlockchain();
                     requestAllToClearTransactionPool();
                 }
-            } catch (InterruptedException ignored) {}
+            } catch (InterruptedException ignored) {
+            }
         }
     }
 
@@ -103,7 +104,8 @@ public class BlockchainActor extends Actor {
                         transactionPool.clear();
                         break;
                 }
-            } catch (InterruptedException ignored) {}
+            } catch (InterruptedException ignored) {
+            }
         }
     }
 
