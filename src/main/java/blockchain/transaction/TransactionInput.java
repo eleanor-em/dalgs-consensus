@@ -2,6 +2,7 @@ package blockchain.transaction;
 
 import consensus.crypto.EccException;
 import consensus.crypto.EccSignature;
+import consensus.util.StringUtils;
 
 import java.security.PublicKey;
 
@@ -9,9 +10,9 @@ public class TransactionInput {
     private final long timestamp;
     private final String address;
     private final float amount;
-    private final byte[] signature;
+    private final String signature;
 
-    public TransactionInput(long timestamp, String address, float amount, byte[] signature) {
+    public TransactionInput(long timestamp, String address, float amount, String signature) {
         this.timestamp = timestamp;
         this.address = address;
         this.amount = amount;
@@ -35,6 +36,6 @@ public class TransactionInput {
     }
 
     public byte[] getSignature() {
-        return signature;
+        return StringUtils.hexToByteArray(signature);
     }
 }
