@@ -71,7 +71,7 @@ public abstract class AbstractRaftState {
             // Apply the changes we've committed to
             while (commitIndex > lastApplied) {
                 var message = ledger.get(++lastApplied).message;
-                log.debug(id + ": committed to message #" + lastApplied + " from " + message.src + ": " + message.msg.data);
+                log.debug(id + ": committed to message #" + lastApplied);
                 client.receiveEntry(message);
             }
         }
@@ -132,12 +132,12 @@ public abstract class AbstractRaftState {
     public void rpcAppendEntries(String uuid, AppendEntriesArgs args) {
         synchronized (lock) {
             onRpc();
-            RpcResult result = RpcResult.success(uuid, id, currentTerm);
+            RpcResult result = RpcResult.success(uuid, id, currentTerm, lastLogIndex);
 
             // Check the caller is up to date
             if (args.term < currentTerm) {
-                log.warn(id + ": failed AppendEntries due to outdated term");
-                result = RpcResult.failure(uuid, id, currentTerm);
+//                log.warn(id + ": failed AppendEntries due to outdated term");
+                result = RpcResult.failure(uuid, id, currentTerm, lastLogIndex);
             } else {
                 // Check if we're behind
                 if (args.term > currentTerm) {
@@ -150,16 +150,12 @@ public abstract class AbstractRaftState {
                     this.leaderId = args.leaderId;
                 }
 
-                if (!args.entries.isEmpty()) {
-                    log.debug(id + ": received entries: " + args.entries);
-                }
-
                 // Check consistency of logs: first, check this message is substantial (not 0, 0 for a heartbeat)
                 // and that the leader has the right assumptions about us
                 if (args.prevLogIndex > 0 && args.prevLogTerm > 0
                         && (!ledger.containsKey(args.prevLogIndex) || ledger.get(args.prevLogIndex).term != args.prevLogTerm)) {
                     log.warn(id + ": failed AppendEntries due to inconsistent logs: " + args.prevLogIndex + ", " + args.prevLogTerm);
-                    result = RpcResult.failure(uuid, id, currentTerm);
+                    result = RpcResult.failure(uuid, id, currentTerm, lastLogIndex);
                 } else {
                     // Next, check if our log needs to be truncated to come in line with the leader's
                     truncateLog(args);
@@ -200,7 +196,7 @@ public abstract class AbstractRaftState {
     private void updateLog(AppendEntriesArgs args) {
         // Add entries to the ledger
         for (var newEntry : args.entries) {
-            log.debug(id + ": appending entry #" + newEntry.index + ": " + newEntry.message.msg.data);
+            log.debug(id + ": appending entry #" + newEntry.index);
 
             // There's no guarantee that the entries are in order, so be a little bit careful here
             this.lastLogIndex = Math.max(this.lastLogIndex, newEntry.index);
@@ -223,7 +219,7 @@ public abstract class AbstractRaftState {
             RpcResult result;
 
             if (args.term < currentTerm) {
-                result = RpcResult.failure(uuid, id, currentTerm);
+                result = RpcResult.failure(uuid, id, currentTerm, lastLogIndex);
             } else {
                 if (args.term > currentTerm) {
                     this.yield(args.term);
@@ -235,9 +231,9 @@ public abstract class AbstractRaftState {
                         && args.lastLogIndex >= this.lastLogIndex) {
                     log.debug(id + ": voted for " + args.candidateId + " in term " + currentTerm);
                     votedFor = Optional.of(args.candidateId);
-                    result = RpcResult.success(uuid, id, currentTerm);
+                    result = RpcResult.success(uuid, id, currentTerm, lastLogIndex);
                 } else {
-                    result = RpcResult.failure(uuid, id, currentTerm);
+                    result = RpcResult.failure(uuid, id, currentTerm, lastLogIndex);
                 }
             }
 
@@ -262,7 +258,7 @@ public abstract class AbstractRaftState {
     }
 
     public void rpcReceiveEntry(String entry) {
-        log.debug(id + ": received entry: " + entry);
+        log.debug(id + ": received entry");
         if (id != leaderId) {
             this.sendMessage(new RpcMessage(entry), leaderId);
         }

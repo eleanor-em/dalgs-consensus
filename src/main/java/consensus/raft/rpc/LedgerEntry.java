@@ -14,6 +14,6 @@ public class LedgerEntry {
     }
 
     public String toString() {
-        return String.format("(%d, %d): from %d: %s", index, term, message.src, message.msg.data);
+        return String.format("(%d, %d): from %d", index, term, message.src);
     }
 }
