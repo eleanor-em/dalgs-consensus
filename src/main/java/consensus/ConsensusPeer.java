@@ -80,24 +80,27 @@ public class ConsensusPeer {
                 } catch (Exception e) {
                     log.error(e.getMessage());
                 }
+            } else {
+                log.info("WALLET ADDRESS:");
+                log.info(wallet.getAddress());
             }
         }
 
-        do {
-            var src = (int) (Math.random() * actors.size());
-            int dest = src;
-            while (dest == src) {
-                dest = (int) (Math.random() * actors.size());
-            }
-
-            var amt = (float) (Math.random());
-            actors.get(src).createTransaction(actors.get(dest).getAddress(), amt);
-            log.info(src + " -> " + dest + ": " + amt);
-
-            try {
-                Thread.sleep(2000 + (int) (3000 * Math.random()));
-            } catch (InterruptedException ignored) {}
-        } while (!Thread.interrupted());
+//        do {
+//            var src = (int) (Math.random() * actors.size());
+//            int dest = src;
+//            while (dest == src) {
+//                dest = (int) (Math.random() * actors.size());
+//            }
+//
+//            var amt = (float) (Math.random());
+//            actors.get(src).createTransaction(actors.get(dest).getAddress(), amt);
+//            log.info(src + " -> " + dest + ": " + amt);
+//
+//            try {
+//                Thread.sleep(2000 + (int) (3000 * Math.random()));
+//            } catch (InterruptedException ignored) {}
+//        } while (!Thread.interrupted());
 
     }
 
