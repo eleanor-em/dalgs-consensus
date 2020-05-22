@@ -64,25 +64,25 @@ public class ConsensusPeer {
             var transactionPool = new TransactionPool();
             var blockchainActor = new BlockchainActor(id, client, blockchain, transactionPool);
             actors.add(blockchainActor);
-//            new Thread(() -> new PeerListener(id, thisPeerHosts, blockchainActor)).start();
-            new Thread(() -> new PeerListener(id, thisPeerHosts, new RaftActor(id, hosts.size(), client))).start();
+            new Thread(() -> new PeerListener(id, thisPeerHosts, blockchainActor)).start();
+            // new Thread(() -> new PeerListener(id, thisPeerHosts, new RaftActor(id, hosts.size(), client))).start();
         }
 
-//        do {
-//            var src = (int) (Math.random() * actors.size());
-//            int dest = src;
-//            while (dest == src) {
-//                dest = (int) (Math.random() * actors.size());
-//            }
-//
-//            var amt = (float) (Math.random());
-//            actors.get(src).createTransaction(actors.get(dest).getAddress(), amt);
-//            log.info(src + " -> " + dest + ": " + amt);
-//
-//            try {
-//                Thread.sleep(2000 + (int) (3000 * Math.random()));
-//            } catch (InterruptedException ignored) {}
-//        } while (!Thread.interrupted());
+        do {
+            var src = (int) (Math.random() * actors.size());
+            int dest = src;
+            while (dest == src) {
+                dest = (int) (Math.random() * actors.size());
+            }
+
+            var amt = (float) (Math.random());
+            actors.get(src).createTransaction(actors.get(dest).getAddress(), amt);
+            log.info(src + " -> " + dest + ": " + amt);
+
+            try {
+                Thread.sleep(2000 + (int) (3000 * Math.random()));
+            } catch (InterruptedException ignored) {}
+        } while (!Thread.interrupted());
     }
 
     private static void runRelease() {

@@ -15,6 +15,7 @@ import consensus.net.data.Message;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -42,7 +43,8 @@ public class BlockchainActor extends Actor {
     }
 
     public void createTransaction(String address, float amount) {
-        wallet.createTransaction(address, amount);
+        Optional<Transaction> transaction = wallet.createTransaction(address, amount);
+        transaction.ifPresent(this::publishTransaction);
     }
 
     public String getAddress() {

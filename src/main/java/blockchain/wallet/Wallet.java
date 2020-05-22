@@ -53,11 +53,13 @@ public class Wallet {
         }
 
         var maybeTrans = transactionPool.getExistingTransaction(getAddress());
-        maybeTrans.ifPresentOrElse(
-                trans -> trans.update(this, recipient, amount),
-                () -> Transaction.newTransaction(this, recipient, amount)
-                        .ifPresent(transactionPool::updateOrAddTransaction)
-        );
+        if (maybeTrans.isPresent()) {
+            maybeTrans.get().update(this, recipient, amount);
+        } else {
+            var maybeNewTrans = Transaction.newTransaction(this, recipient, amount);
+            maybeNewTrans.ifPresent(transactionPool::updateOrAddTransaction);
+            return maybeNewTrans;
+        }
 
         return maybeTrans;
     }
