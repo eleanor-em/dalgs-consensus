@@ -42,7 +42,7 @@ public class Transaction {
         this.transactionOutputs = transactionOutputs;
     }
 
-    public void update(Wallet wallet, String recipient, float amount) {
+    public void update(Wallet wallet, String recipient, String message, float amount) {
         TransactionOutput senderOutput = this.transactionOutputs.stream()
                 .filter(t -> t.getAddress().equals(wallet.getAddress()))
                 .findAny()
@@ -58,7 +58,7 @@ public class Transaction {
         }
 
         senderOutput.setAmount(senderOutput.getAmount() - amount);
-        this.transactionOutputs.add(new TransactionOutput(amount, recipient));
+        this.transactionOutputs.add(new TransactionOutput(amount, message, recipient));
         wallet.signTransaction(this);
     }
 
@@ -79,14 +79,14 @@ public class Transaction {
         }
     }
 
-    public static Optional<Transaction> newTransaction(Wallet wallet, String recipient, float amount) {
+    public static Optional<Transaction> newTransaction(Wallet wallet, String recipient, String message, float amount) {
         if (amount > wallet.getBalance()) {
             return Optional.empty();
         }
 
         List<TransactionOutput> transactionOutputs = new ArrayList<>();
-        transactionOutputs.add(new TransactionOutput(wallet.getBalance() - amount, wallet.getAddress()));
-        transactionOutputs.add(new TransactionOutput(amount, recipient));
+        transactionOutputs.add(new TransactionOutput(wallet.getBalance() - amount, message, wallet.getAddress()));
+        transactionOutputs.add(new TransactionOutput(amount, message, recipient));
         return Transaction.transactionWithOutputs(wallet, transactionOutputs);
     }
 

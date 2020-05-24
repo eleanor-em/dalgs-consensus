@@ -114,6 +114,20 @@ public class ConsensusPeer {
 
         var hosts = loadHosts();
         var client = new IpcServer(id);
-        new Thread(() -> new PeerListener(id, hosts, new RaftActor(id, hosts.size(), client))).start();
+//        new Thread(() -> new PeerListener(id, hosts, new RaftActor(id, hosts.size(), client))).start();
+        var blockchain = new Blockchain();
+        var transactionPool = new TransactionPool();
+        var miner = new Miner(blockchain, transactionPool);
+        var wallet = new Wallet(blockchain, transactionPool);
+        var blockchainActor = new BlockchainActor(id, client, blockchain, transactionPool, miner, wallet);
+        new Thread(() -> new PeerListener(id, hosts, blockchainActor)).start();
+
+        WSApplication wsApplication;
+        try {
+            wsApplication = new WSApplication(blockchain, transactionPool, miner, wallet);
+            wsApplication.run("server");
+        } catch (Exception e) {
+            log.error(e.getMessage());
+        }
     }
 }

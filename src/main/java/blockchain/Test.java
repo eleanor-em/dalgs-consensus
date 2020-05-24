@@ -38,7 +38,7 @@ public class Test {
     private static void transact() {
         Wallet anotherWallet = new Wallet(blockChain, transactionPool);
         String recipient = wallet.getAddress();
-        anotherWallet.createTransaction(recipient, 1);
-        anotherWallet.createTransaction(recipient, 1);
+        anotherWallet.createTransaction(recipient, "hello", 1);
+        anotherWallet.createTransaction(recipient, "hello", 1);
     }
 }

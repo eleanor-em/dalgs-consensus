@@ -2,10 +2,12 @@ package blockchain.transaction;
 
 public class TransactionOutput {
     private float amount;
+    public final String message;
     private final String address;
 
-    public TransactionOutput(float amount, String address) {
+    public TransactionOutput(float amount, String message, String address) {
         this.amount = amount;
+        this.message = message;
         this.address = address;
     }
 

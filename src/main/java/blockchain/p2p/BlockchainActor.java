@@ -5,6 +5,7 @@ import blockchain.miner.Miner;
 import blockchain.model.BlockchainMessage;
 import blockchain.model.MessageType;
 import blockchain.transaction.Transaction;
+import blockchain.transaction.TransactionOutput;
 import blockchain.transaction.TransactionPool;
 import blockchain.wallet.Wallet;
 import consensus.IConsensusClient;
@@ -15,6 +16,7 @@ import consensus.net.data.Message;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -30,6 +32,8 @@ public class BlockchainActor extends Actor {
     private final Miner miner;
     private final Wallet wallet;
 
+    private final Object lock = new Object();
+
     public BlockchainActor(int id, IConsensusClient client, Blockchain blockchain, TransactionPool transactionPool, Miner miner, Wallet wallet) {
         this.id = id;
         this.client = client;
@@ -40,10 +44,11 @@ public class BlockchainActor extends Actor {
         this.wallet = wallet;
 
         new Thread(this::mineThread).start();
+        new Thread(this::clientMonThread).start();
     }
 
-    public void createTransaction(String address, float amount) {
-        Optional<Transaction> transaction = wallet.createTransaction(address, amount);
+    public void createTransaction(String address, String message, float amount) {
+        Optional<Transaction> transaction = wallet.createTransaction(address, message, amount);
         transaction.ifPresent(this::publishTransaction);
     }
 
@@ -55,12 +60,25 @@ public class BlockchainActor extends Actor {
         while (!Thread.interrupted()) {
             try {
                 TimeUnit.SECONDS.sleep(3);
-                var maybeBlock = miner.mine();
-                if (maybeBlock.isPresent()) {
-                    // Send to client
-                    maybeBlock.get().getTransactionList().forEach(tx -> this.sendToClient(tx, id));
-                    requestAllToReplicateBlockchain();
-                    requestAllToClearTransactionPool();
+                synchronized (lock) {
+                    var maybeBlock = miner.mine();
+                    if (maybeBlock.isPresent()) {
+                        requestAllToReplicateBlockchain();
+                        requestAllToClearTransactionPool();
+                    }
+                }
+            } catch (InterruptedException ignored) {
+            }
+        }
+    }
+
+    private void clientMonThread() {
+        var queue = client.getBroadcastQueue();
+        while (!Thread.interrupted()) {
+            try {
+                var msg = queue.take();
+                synchronized (lock) {
+                    this.createTransaction(this.wallet.getAddress(), msg.data, 0f);
                 }
             } catch (InterruptedException ignored) {
             }
@@ -85,23 +103,22 @@ public class BlockchainActor extends Actor {
 
                 switch (blockchainMessage.getMessageType()) {
                     case REPLICATE_BLOCKCHAIN:
-                        int priorLength = blockchain.getLength();
-                        Blockchain newBlockchain = StringUtils.fromJson(blockchainMessage.getJsonData(), Blockchain.class);
-                        blockchain.replaceListOfBlocks(newBlockchain);
-                        for (int i = priorLength; i < newBlockchain.getLength(); ++i) {
-                            newBlockchain.getBlockList()
-                                    .get(i)
-                                    .getTransactionList()
-                                    .forEach(tx -> this.sendToClient(tx, id));
+                        synchronized (lock) {
+                            Blockchain newBlockchain = StringUtils.fromJson(blockchainMessage.getJsonData(), Blockchain.class);
+                            blockchain.replaceListOfBlocks(newBlockchain);
                         }
                         break;
                     case ADD_TRANSACTION:
-                        Transaction newTransaction = StringUtils.fromJson(blockchainMessage.getJsonData(), Transaction.class);
-                        transactionPool.updateOrAddTransaction(newTransaction);
-                        this.sendToClient(newTransaction, message.src);
+                        synchronized (lock) {
+                            Transaction newTransaction = StringUtils.fromJson(blockchainMessage.getJsonData(), Transaction.class);
+                            transactionPool.updateOrAddTransaction(newTransaction);
+                            this.sendToClient(newTransaction, message.src);
+                        }
                         break;
                     case CLEAR_TRANSACTION_POOL:
-                        transactionPool.clear();
+                        synchronized (lock) {
+                            transactionPool.clear();
+                        }
                         break;
                 }
             } catch (InterruptedException ignored) {
@@ -110,7 +127,11 @@ public class BlockchainActor extends Actor {
     }
 
     private void sendToClient(Transaction tx, int src) {
-        client.receiveEntry(new IncomingMessage(new Message(StringUtils.toJson(tx.getTransactionOutputs())), src));
+        List<TransactionOutput> list;
+        list = List.copyOf(tx.getTransactionOutputs());
+        list.stream()
+            .map(output -> output.message)
+            .forEach(msg -> client.receiveEntry(new IncomingMessage(new Message(msg), src)));
     }
 
     private void requestAllToReplicateBlockchain() {
