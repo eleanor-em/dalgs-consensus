@@ -3,7 +3,8 @@ package consensus;
 import api.application.WSApplication;
 import blockchain.block.Blockchain;
 import blockchain.miner.Miner;
-import blockchain.p2p.BlockchainActor;
+import blockchain.p2p.BlockchainPowActor;
+import blockchain.p2p.BlockchainRaftActor;
 import blockchain.transaction.TransactionPool;
 import blockchain.wallet.Wallet;
 import consensus.ipc.IpcServer;
@@ -33,7 +34,7 @@ public class ConsensusPeer {
         ConfigManager.getString("consensus")
                 .ifPresentOrElse(
                         val -> mode = val,
-                        ()  -> log.fatal("choose a consensus algorithm (set \"consensus=\" in config)")
+                        () -> log.fatal("choose a consensus algorithm (set \"consensus=\" in config)")
                 );
         if (mode.equalsIgnoreCase("raft") || mode.equalsIgnoreCase("blockchain")) {
             isRaft = mode.equalsIgnoreCase("raft");
@@ -68,7 +69,7 @@ public class ConsensusPeer {
     private static void runDebug() {
         var hosts = loadHosts();
 
-        var actors = new ArrayList<BlockchainActor>();
+        var actors = new ArrayList<BlockchainPowActor>();
 
         WSApplication wsApplication;
         // Start a peer for each id
@@ -77,16 +78,17 @@ public class ConsensusPeer {
             var thisPeerHosts = new ArrayList<>(hosts);
             var client = new IpcServer(id);
 
+            var blockchain = new Blockchain();
+            var transactionPool = new TransactionPool();
+            var miner = new Miner(blockchain, transactionPool);
+            var wallet = new Wallet(blockchain, transactionPool);
             if (isRaft) {
-                new Thread(() -> new PeerListener(id, thisPeerHosts, new RaftActor(id, hosts.size(), client))).start();
+                var blockchainRaftActor = new BlockchainRaftActor(id, hosts.size(), client, blockchain, transactionPool, miner, wallet);
+                new Thread(() -> new PeerListener(id, thisPeerHosts, blockchainRaftActor)).start();
             } else {
-                var blockchain = new Blockchain();
-                var transactionPool = new TransactionPool();
-                var miner = new Miner(blockchain, transactionPool);
-                var wallet = new Wallet(blockchain, transactionPool);
-                var blockchainActor = new BlockchainActor(id, client, blockchain, transactionPool, miner, wallet);
-                actors.add(blockchainActor);
-                new Thread(() -> new PeerListener(id, thisPeerHosts, blockchainActor)).start();
+                var blockchainPowActor = new BlockchainPowActor(id, client, blockchain, transactionPool, miner, wallet);
+                actors.add(blockchainPowActor);
+                new Thread(() -> new PeerListener(id, thisPeerHosts, blockchainPowActor)).start();
 
                 if (i == 0) {
                     try {
@@ -120,7 +122,7 @@ public class ConsensusPeer {
             var transactionPool = new TransactionPool();
             var miner = new Miner(blockchain, transactionPool);
             var wallet = new Wallet(blockchain, transactionPool);
-            var blockchainActor = new BlockchainActor(id, client, blockchain, transactionPool, miner, wallet);
+            var blockchainActor = new BlockchainPowActor(id, client, blockchain, transactionPool, miner, wallet);
             new Thread(() -> new PeerListener(id, hosts, blockchainActor)).start();
 
             WSApplication wsApplication;
