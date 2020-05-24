@@ -33,32 +33,13 @@ public abstract class BlockchainActor extends Actor {
         this.wallet = wallet;
     }
 
-    protected void sendToClient(Transaction tx, int src) {
-        List<TransactionOutput> list;
-        list = List.copyOf(tx.getTransactionOutputs());
-        list.stream()
-                .map(output -> output.message)
-                .forEach(msg -> client.receiveEntry(new IncomingMessage(new Message(msg), src)));
-    }
+    protected abstract void sendToClient(Transaction tx, int src);
 
-    protected void requestAllToReplicateBlockchain() {
-        BlockchainMessage blockchainMessage = new BlockchainMessage(MessageType.REPLICATE_BLOCKCHAIN, blockchain);
-        broadcast(blockchainMessage);
-    }
+    protected abstract void requestAllToReplicateBlockchain();
 
-    protected void publishTransaction(Transaction transaction) {
-        BlockchainMessage blockchainMessage = new BlockchainMessage(MessageType.ADD_TRANSACTION, transaction);
-        broadcast(blockchainMessage);
-        this.sendToClient(transaction, id);
-    }
+    protected abstract void publishTransaction(Transaction transaction);
 
-    protected void requestAllToClearTransactionPool() {
-        transactionPool.clear();
-        BlockchainMessage blockchainMessage = new BlockchainMessage(MessageType.CLEAR_TRANSACTION_POOL);
-        broadcast(blockchainMessage);
-    }
+    protected abstract void requestAllToClearTransactionPool();
 
-    protected void broadcast(BlockchainMessage blockchainMessage) {
-        this.sendMessageToAll(new Message(StringUtils.toJson(blockchainMessage)));
-    }
+    protected abstract void broadcast(BlockchainMessage blockchainMessage);
 }

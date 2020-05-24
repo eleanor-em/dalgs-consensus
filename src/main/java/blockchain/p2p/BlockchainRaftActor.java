@@ -2,6 +2,8 @@ package blockchain.p2p;
 
 import blockchain.block.Blockchain;
 import blockchain.miner.Miner;
+import blockchain.model.BlockchainMessage;
+import blockchain.transaction.Transaction;
 import blockchain.transaction.TransactionPool;
 import blockchain.wallet.Wallet;
 import consensus.IConsensusClient;
@@ -49,6 +51,8 @@ public class BlockchainRaftActor extends BlockchainActor {
         var decoded = (RpcMessage) StringUtils.fromJson(message.msg.data, RpcMessage.class);
         switch (decoded.kind) {
             case APPEND_ENTRIES:
+                // #TODO: replicate the blockchain here
+                this.requestAllToReplicateBlockchain();
                 decoded.decodeAppendEntries().ifPresent(args -> state.rpcAppendEntries(decoded.uuid, args));
                 break;
             case REQUEST_VOTE:
@@ -58,8 +62,26 @@ public class BlockchainRaftActor extends BlockchainActor {
                 decoded.decodeResult().ifPresent(state::rpcReceiveResult);
                 break;
             case NEW_ENTRY:
+                // #TODO: publish a transaction here
+                this.publishTransaction(null);;
                 state.rpcReceiveEntry(decoded.payload);
                 break;
         }
+    }
+
+    protected void sendToClient(Transaction tx, int src) {
+    }
+
+    protected void requestAllToReplicateBlockchain() {
+    }
+
+    protected void publishTransaction(Transaction transaction) {
+    }
+
+    @Override
+    protected void requestAllToClearTransactionPool() {
+    }
+
+    protected void broadcast(BlockchainMessage blockchainMessage) {
     }
 }
