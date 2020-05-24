@@ -2,7 +2,10 @@ package api.pojo;
 
 public class TransactionPOJO {
     private String recipient;
+    private String message;
     private float amount;
+
+    public String getMessage() { return message; }
 
     public String getRecipient() {
         return recipient;

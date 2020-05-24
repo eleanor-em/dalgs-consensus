@@ -63,7 +63,7 @@ public class BlockchainResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response postTransaction(TransactionPOJO transactionPOJO) {
         try {
-            wallet.createTransaction(transactionPOJO.getRecipient(), transactionPOJO.getAmount());
+            wallet.createTransaction(transactionPOJO.getRecipient(), transactionPOJO.getMessage(), transactionPOJO.getAmount());
             return Response.ok(StringUtils.toJson(transactionPool.getTransactionList()), MediaType.APPLICATION_JSON).build();
         } catch (Exception e) {
             return Response.status(Response.Status.BAD_REQUEST).build();

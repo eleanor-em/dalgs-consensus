@@ -45,7 +45,7 @@ public class Wallet {
         return EccSignature.publicKeyToHex(publicKey);
     }
 
-    public Optional<Transaction> createTransaction(String recipient, float amount) {
+    public Optional<Transaction> createTransaction(String recipient, String message, float amount) {
         balance = calculateBalance();
         if (amount > balance) {
             log.warn("Your wallet does not have enough money!");
@@ -54,9 +54,9 @@ public class Wallet {
 
         var maybeTrans = transactionPool.getExistingTransaction(getAddress());
         if (maybeTrans.isPresent()) {
-            maybeTrans.get().update(this, recipient, amount);
+            maybeTrans.get().update(this, recipient, message, amount);
         } else {
-            var maybeNewTrans = Transaction.newTransaction(this, recipient, amount);
+            var maybeNewTrans = Transaction.newTransaction(this, recipient, message, amount);
             maybeNewTrans.ifPresent(transactionPool::updateOrAddTransaction);
             return maybeNewTrans;
         }

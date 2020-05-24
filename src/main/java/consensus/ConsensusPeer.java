@@ -25,13 +25,25 @@ import java.util.stream.Collectors;
  */
 public class ConsensusPeer {
     private static final Logger log = LogManager.getLogger(ConsensusPeer.class);
+    private static String mode;
+    private static boolean isRaft;
 
     public static void main(String[] args) {
         ConfigManager.loadProperties();
-        if (ConfigManager.isDebug()) {
-            runDebug();
+        ConfigManager.getString("consensus")
+                .ifPresentOrElse(
+                        val -> mode = val,
+                        ()  -> log.fatal("choose a consensus algorithm (set \"consensus=\" in config)")
+                );
+        if (mode.equalsIgnoreCase("raft") || mode.equalsIgnoreCase("blockchain")) {
+            isRaft = mode.equalsIgnoreCase("raft");
+            if (ConfigManager.isDebug()) {
+                runDebug();
+            } else {
+                runRelease();
+            }
         } else {
-            runRelease();
+            log.fatal("consensus algorithm should be either \"raft\" or \"blockchain\"");
         }
     }
 
@@ -64,44 +76,31 @@ public class ConsensusPeer {
             final int id = i;
             var thisPeerHosts = new ArrayList<>(hosts);
             var client = new IpcServer(id);
-            var blockchain = new Blockchain();
-            var transactionPool = new TransactionPool();
-            var miner = new Miner(blockchain, transactionPool);
-            var wallet = new Wallet(blockchain, transactionPool);
-            var blockchainActor = new BlockchainActor(id, client, blockchain, transactionPool, miner, wallet);
-            actors.add(blockchainActor);
-            new Thread(() -> new PeerListener(id, thisPeerHosts, blockchainActor)).start();
-            // new Thread(() -> new PeerListener(id, thisPeerHosts, new RaftActor(id, hosts.size(), client))).start();
 
-            if (i == 0) {
-                try {
-                    wsApplication = new WSApplication(blockchain, transactionPool, miner, wallet);
-                    wsApplication.run("server");
-                } catch (Exception e) {
-                    log.error(e.getMessage());
-                }
+            if (isRaft) {
+                new Thread(() -> new PeerListener(id, thisPeerHosts, new RaftActor(id, hosts.size(), client))).start();
             } else {
+                var blockchain = new Blockchain();
+                var transactionPool = new TransactionPool();
+                var miner = new Miner(blockchain, transactionPool);
+                var wallet = new Wallet(blockchain, transactionPool);
+                var blockchainActor = new BlockchainActor(id, client, blockchain, transactionPool, miner, wallet);
+                actors.add(blockchainActor);
+                new Thread(() -> new PeerListener(id, thisPeerHosts, blockchainActor)).start();
+
+                if (i == 0) {
+                    try {
+                        wsApplication = new WSApplication(blockchain, transactionPool, miner, wallet);
+                        wsApplication.run("server");
+                    } catch (Exception e) {
+                        log.error(e.getMessage());
+                    }
+                }
+
                 log.info("WALLET ADDRESS:");
                 log.info(wallet.getAddress());
             }
         }
-
-//        do {
-//            var src = (int) (Math.random() * actors.size());
-//            int dest = src;
-//            while (dest == src) {
-//                dest = (int) (Math.random() * actors.size());
-//            }
-//
-//            var amt = (float) (Math.random());
-//            actors.get(src).createTransaction(actors.get(dest).getAddress(), amt);
-//            log.info(src + " -> " + dest + ": " + amt);
-//
-//            try {
-//                Thread.sleep(2000 + (int) (3000 * Math.random()));
-//            } catch (InterruptedException ignored) {}
-//        } while (!Thread.interrupted());
-
     }
 
     private static void runRelease() {
@@ -114,6 +113,26 @@ public class ConsensusPeer {
 
         var hosts = loadHosts();
         var client = new IpcServer(id);
-        new Thread(() -> new PeerListener(id, hosts, new RaftActor(id, hosts.size(), client))).start();
+        if (isRaft) {
+            new Thread(() -> new PeerListener(id, hosts, new RaftActor(id, hosts.size(), client))).start();
+        } else {
+            var blockchain = new Blockchain();
+            var transactionPool = new TransactionPool();
+            var miner = new Miner(blockchain, transactionPool);
+            var wallet = new Wallet(blockchain, transactionPool);
+            var blockchainActor = new BlockchainActor(id, client, blockchain, transactionPool, miner, wallet);
+            new Thread(() -> new PeerListener(id, hosts, blockchainActor)).start();
+
+            WSApplication wsApplication;
+            try {
+                wsApplication = new WSApplication(blockchain, transactionPool, miner, wallet);
+                wsApplication.run("server");
+            } catch (Exception e) {
+                log.error(e.getMessage());
+            }
+
+            log.info("WALLET ADDRESS:");
+            log.info(wallet.getAddress());
+        }
     }
 }
