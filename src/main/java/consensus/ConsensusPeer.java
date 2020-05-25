@@ -32,7 +32,7 @@ public class ConsensusPeer {
         ConfigManager.getString("consensus")
                 .ifPresentOrElse(
                         val -> mode = val,
-                        ()  -> log.fatal("choose a consensus algorithm (set \"consensus=\" in config)")
+                        () -> log.fatal("choose a consensus algorithm (set \"consensus=\" in config)")
                 );
         if (mode.equalsIgnoreCase("raft") || mode.equalsIgnoreCase("blockchain")) {
             isRaft = mode.equalsIgnoreCase("raft");
@@ -85,9 +85,6 @@ public class ConsensusPeer {
                 var blockchainActor = new BlockchainActor(id, client, blockchain, transactionPool, miner, wallet);
                 actors.add(blockchainActor);
                 new Thread(() -> new PeerListener(id, thisPeerHosts, blockchainActor)).start();
-
-                log.info("WALLET ADDRESS:");
-                log.info(wallet.getAddress());
             }
         }
     }
@@ -111,9 +108,6 @@ public class ConsensusPeer {
             var wallet = new Wallet(blockchain, transactionPool);
             var blockchainActor = new BlockchainActor(id, client, blockchain, transactionPool, miner, wallet);
             new Thread(() -> new PeerListener(id, hosts, blockchainActor)).start();
-
-            log.info("WALLET ADDRESS:");
-            log.info(wallet.getAddress());
         }
     }
 }
