@@ -25,7 +25,9 @@ public class ConfigManager {
     public static void loadProperties() {
         FileBasedConfigurationBuilder<PropertiesConfiguration> builder =
                 new FileBasedConfigurationBuilder<>(PropertiesConfiguration.class)
-                        .configure(new Parameters().properties().setFileName(CONFIG_FILENAME));
+                        .configure(new Parameters()
+                                .properties()
+                                .setFileName(CONFIG_FILENAME));
         try {
             config.setIfEmpty(builder.getConfiguration());
         } catch (ConfigurationException e) {

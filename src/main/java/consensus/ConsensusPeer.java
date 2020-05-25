@@ -1,6 +1,5 @@
 package consensus;
 
-import api.application.WSApplication;
 import blockchain.block.Blockchain;
 import blockchain.miner.Miner;
 import blockchain.p2p.BlockchainActor;
@@ -70,7 +69,6 @@ public class ConsensusPeer {
 
         var actors = new ArrayList<BlockchainActor>();
 
-        WSApplication wsApplication;
         // Start a peer for each id
         for (int i = 0; i < hosts.size(); ++i) {
             final int id = i;
@@ -87,15 +85,6 @@ public class ConsensusPeer {
                 var blockchainActor = new BlockchainActor(id, client, blockchain, transactionPool, miner, wallet);
                 actors.add(blockchainActor);
                 new Thread(() -> new PeerListener(id, thisPeerHosts, blockchainActor)).start();
-
-                if (i == 0) {
-                    try {
-                        wsApplication = new WSApplication(blockchain, transactionPool, miner, wallet);
-                        wsApplication.run("server");
-                    } catch (Exception e) {
-                        log.error(e.getMessage());
-                    }
-                }
 
                 log.info("WALLET ADDRESS:");
                 log.info(wallet.getAddress());
@@ -122,14 +111,6 @@ public class ConsensusPeer {
             var wallet = new Wallet(blockchain, transactionPool);
             var blockchainActor = new BlockchainActor(id, client, blockchain, transactionPool, miner, wallet);
             new Thread(() -> new PeerListener(id, hosts, blockchainActor)).start();
-
-            WSApplication wsApplication;
-            try {
-                wsApplication = new WSApplication(blockchain, transactionPool, miner, wallet);
-                wsApplication.run("server");
-            } catch (Exception e) {
-                log.error(e.getMessage());
-            }
 
             log.info("WALLET ADDRESS:");
             log.info(wallet.getAddress());

@@ -30,9 +30,6 @@ public class CryptoClient implements IConsensusClient {
     private final Map<Integer, PostVoteMessage> postVotes = new ConcurrentHashMap<>();
     private final Map<String, Map<Integer, DecryptShareMessage>> decryptShares = new ConcurrentHashMap<>();
 
-    private final int clientMinDelay = ConfigManager.getInt("clientMinDelay").orElse(1000);
-    private final int clientMaxDelay = ConfigManager.getInt("clientMaxDelay").orElse(5000);
-
     private final CryptoContext ctx;
     private final int peerCount;
     private final Random rng = new Random();
@@ -88,16 +85,6 @@ public class CryptoClient implements IConsensusClient {
         this.ctx = new CryptoContext(new BigInteger(p));
     }
 
-    private void unsafeSleep() {
-        var delta = clientMaxDelay - clientMinDelay;
-        if (delta > 0) {
-            try {
-                Thread.sleep(rng.nextInt(delta) + clientMinDelay);
-            } catch (InterruptedException ignored) {
-            }
-        }
-    }
-
     public void run() {
         // Generate key share
         if (sessionData.keyShare.isEmpty()) {
@@ -147,7 +134,6 @@ public class CryptoClient implements IConsensusClient {
         while (postVotes.size() < peerCount) {
             Thread.yield();
         }
-        this.unsafeSleep();
 
         // Check proofs
         for (var postVote : postVotes.values()) {
@@ -173,7 +159,6 @@ public class CryptoClient implements IConsensusClient {
         while (keygenCommits.size() < peerCount) {
             Thread.yield();
         }
-        this.unsafeSleep();
 
         // Publish opening and wait for others
         var openingMessage = new KeygenOpeningMessage(sessionData.sessionId, share);
@@ -185,7 +170,6 @@ public class CryptoClient implements IConsensusClient {
         while (keygenOpenings.size() < peerCount) {
             Thread.yield();
         }
-        this.unsafeSleep();
 
         // Check openings and proofs
         for (var i : keygenOpenings.keySet()) {
@@ -220,7 +204,6 @@ public class CryptoClient implements IConsensusClient {
                 queue.put(shareMessage.encode());
             } catch (InterruptedException ignored) {
             }
-            this.unsafeSleep();
         }
 
         // Wait for all shares
