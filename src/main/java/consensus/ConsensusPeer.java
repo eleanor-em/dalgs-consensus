@@ -87,23 +87,6 @@ public class ConsensusPeer {
                 new Thread(() -> new PeerListener(id, thisPeerHosts, blockchainActor)).start();
             }
         }
-
-        do {
-            var src = (int) (Math.random() * actors.size());
-            int dest = src;
-            while (dest == src) {
-                dest = (int) (Math.random() * actors.size());
-            }
-
-            var amt = (float) (Math.random());
-            actors.get(src).createTransaction(actors.get(dest).getAddress(), "", amt);
-            log.info(src + " -> " + dest + ": " + amt);
-
-            try {
-                Thread.sleep(2000 + (int) (3000 * Math.random()));
-            } catch (InterruptedException ignored) {
-            }
-        } while (!Thread.interrupted());
     }
 
     private static void runRelease() {
