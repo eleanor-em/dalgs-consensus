@@ -28,8 +28,7 @@ public class CryptoDriver {
             updateStatement.setString(3, data.voteMsg.map(StringUtils::toJson).orElse(""));
             updateStatement.executeUpdate();
         } catch (SQLException ignored) {
-            ignored.printStackTrace();
-            log.warn("failed to save key share");
+            log.warn("failed to save session data");
         }
     }
 
@@ -85,6 +84,9 @@ public class CryptoDriver {
     }
 
     public static void main(String[] args) {
+
+        log.info("log level: " + LogManager.getRootLogger().getLevel());
+
         // Load session name from command line
         String sessionId = "default";
         if (args.length > 0) {
