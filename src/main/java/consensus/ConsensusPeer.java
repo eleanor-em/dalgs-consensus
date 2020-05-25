@@ -1,6 +1,5 @@
 package consensus;
 
-import api.application.WSApplication;
 import blockchain.block.Blockchain;
 import blockchain.miner.Miner;
 import blockchain.p2p.BlockchainActor;
@@ -33,7 +32,7 @@ public class ConsensusPeer {
         ConfigManager.getString("consensus")
                 .ifPresentOrElse(
                         val -> mode = val,
-                        ()  -> log.fatal("choose a consensus algorithm (set \"consensus=\" in config)")
+                        () -> log.fatal("choose a consensus algorithm (set \"consensus=\" in config)")
                 );
         if (mode.equalsIgnoreCase("raft") || mode.equalsIgnoreCase("blockchain")) {
             isRaft = mode.equalsIgnoreCase("raft");
@@ -70,7 +69,6 @@ public class ConsensusPeer {
 
         var actors = new ArrayList<BlockchainActor>();
 
-        WSApplication wsApplication;
         // Start a peer for each id
         for (int i = 0; i < hosts.size(); ++i) {
             final int id = i;
@@ -87,20 +85,25 @@ public class ConsensusPeer {
                 var blockchainActor = new BlockchainActor(id, client, blockchain, transactionPool, miner, wallet);
                 actors.add(blockchainActor);
                 new Thread(() -> new PeerListener(id, thisPeerHosts, blockchainActor)).start();
-
-                if (i == 0) {
-                    try {
-                        wsApplication = new WSApplication(blockchain, transactionPool, miner, wallet);
-                        wsApplication.run("server");
-                    } catch (Exception e) {
-                        log.error(e.getMessage());
-                    }
-                }
-
-                log.info("WALLET ADDRESS:");
-                log.info(wallet.getAddress());
             }
         }
+
+        do {
+            var src = (int) (Math.random() * actors.size());
+            int dest = src;
+            while (dest == src) {
+                dest = (int) (Math.random() * actors.size());
+            }
+
+            var amt = (float) (Math.random());
+            actors.get(src).createTransaction(actors.get(dest).getAddress(), "", amt);
+            log.info(src + " -> " + dest + ": " + amt);
+
+            try {
+                Thread.sleep(2000 + (int) (3000 * Math.random()));
+            } catch (InterruptedException ignored) {
+            }
+        } while (!Thread.interrupted());
     }
 
     private static void runRelease() {
@@ -122,17 +125,6 @@ public class ConsensusPeer {
             var wallet = new Wallet(blockchain, transactionPool);
             var blockchainActor = new BlockchainActor(id, client, blockchain, transactionPool, miner, wallet);
             new Thread(() -> new PeerListener(id, hosts, blockchainActor)).start();
-
-            WSApplication wsApplication;
-            try {
-                wsApplication = new WSApplication(blockchain, transactionPool, miner, wallet);
-                wsApplication.run("server");
-            } catch (Exception e) {
-                log.error(e.getMessage());
-            }
-
-            log.info("WALLET ADDRESS:");
-            log.info(wallet.getAddress());
         }
     }
 }
