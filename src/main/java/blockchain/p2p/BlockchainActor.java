@@ -9,6 +9,7 @@ import blockchain.transaction.TransactionOutput;
 import blockchain.transaction.TransactionPool;
 import blockchain.wallet.Wallet;
 import consensus.IConsensusClient;
+import consensus.util.ConfigManager;
 import consensus.util.StringUtils;
 import consensus.net.Actor;
 import consensus.net.data.IncomingMessage;
@@ -26,6 +27,7 @@ public class BlockchainActor extends Actor {
     private final int id;
     private final IConsensusClient client;
     private final LinkedBlockingQueue<IncomingMessage> messages = new LinkedBlockingQueue<>();
+    private static final int MINE_RATE = ConfigManager.getInt("mineRate").orElse(10000);
 
     private final Blockchain blockchain;
     private final TransactionPool transactionPool;
@@ -59,7 +61,7 @@ public class BlockchainActor extends Actor {
     private void mineThread() {
         while (!Thread.interrupted()) {
             try {
-                TimeUnit.SECONDS.sleep(3);
+                TimeUnit.MILLISECONDS.sleep(MINE_RATE);
                 synchronized (lock) {
                     var maybeBlock = miner.mine();
                     if (maybeBlock.isPresent()) {
