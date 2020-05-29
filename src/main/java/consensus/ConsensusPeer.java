@@ -90,17 +90,20 @@ public class ConsensusPeer {
                 actors.add(blockchainPowActor);
                 new Thread(() -> new PeerListener(id, thisPeerHosts, blockchainPowActor)).start();
 
-                if (i == 0) {
+                if (i == 0 || i == 1) {
+                    String configFile = "";
+                    if (i == 0) {
+                        configFile = "ws1.yaml";
+                    } else {
+                        configFile = "ws2.yaml";
+                    }
                     try {
                         wsApplication = new WSApplication(blockchain, transactionPool, miner, wallet);
-                        wsApplication.run("server");
+                        wsApplication.run("server", configFile);
                     } catch (Exception e) {
                         log.error(e.getMessage());
                     }
                 }
-
-                log.info("WALLET ADDRESS:");
-                log.info(wallet.getAddress());
             }
         }
     }
@@ -132,9 +135,6 @@ public class ConsensusPeer {
             } catch (Exception e) {
                 log.error(e.getMessage());
             }
-
-            log.info("WALLET ADDRESS:");
-            log.info(wallet.getAddress());
         }
     }
 }
