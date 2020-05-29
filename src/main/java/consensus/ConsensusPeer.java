@@ -73,32 +73,22 @@ public class ConsensusPeer {
             new Thread(() -> new PeerListener(id, thisPeerHosts, blockchainActor)).start();
             // new Thread(() -> new PeerListener(id, thisPeerHosts, new RaftActor(id, hosts.size(), client))).start();
 
-            if (i == 0) {
+            if (i == 0 || i == 1) {
                 try {
                     wsApplication = new WSApplication(blockchain, transactionPool, miner, wallet);
-                    wsApplication.run("server");
+                    String configFile = "";
+                    if (i == 0) {
+                        configFile = "first-configuration.yml";
+                    }
+                    if (i == 1) {
+                        configFile = "second-configuration.yml";
+                    }
+                    wsApplication.run("server", configFile);
                 } catch (Exception e) {
                     log.error(e.getMessage());
                 }
             }
         }
-
-        do {
-            var src = (int) (Math.random() * actors.size());
-            int dest = src;
-            while (dest == src) {
-                dest = (int) (Math.random() * actors.size());
-            }
-
-            var amt = (float) (Math.random());
-            actors.get(src).createTransaction(actors.get(dest).getAddress(), amt);
-            log.info(src + " -> " + dest + ": " + amt);
-
-            try {
-                Thread.sleep(2000 + (int) (3000 * Math.random()));
-            } catch (InterruptedException ignored) {}
-        } while (!Thread.interrupted());
-
     }
 
     private static void runRelease() {
